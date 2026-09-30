@@ -8,8 +8,8 @@ x-rails: &rails
 
 x-web-healthcheck: &web-healthcheck
   test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/3000'"]
-  interval: 2s
-  retries: 60
+  interval: 3s
+  retries: 5
 
 services:
   postgres:
@@ -20,8 +20,8 @@ services:
       - ./volumes/pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
-      interval: 2s
-      retries: 30
+      interval: 3s
+      retries: 5
 
   redis:
     image: redis:7-alpine
@@ -30,27 +30,24 @@ services:
       - ./volumes/redisdata:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 2s
-      retries: 30
+      interval: 3s
+      retries: 5
 
   auth:
     <<: *rails
     build: ./auth
-    volumes: ["./auth:/app"]
     command: sh -c "bin/rails db:prepare && bin/rails server -b 0.0.0.0"
     healthcheck: *web-healthcheck
 
   tickets:
     <<: *rails
     build: ./tickets
-    volumes: ["./tickets:/app"]
     command: sh -c "bin/rails db:prepare && bin/rails server -b 0.0.0.0"
     healthcheck: *web-healthcheck
 
   tickets-listener:
     <<: *rails
     build: ./tickets
-    volumes: ["./tickets:/app"]
     command: bin/rails events:listen
     depends_on:
       tickets: { condition: service_healthy }
@@ -59,14 +56,12 @@ services:
   orders:
     <<: *rails
     build: ./orders
-    volumes: ["./orders:/app"]
     command: sh -c "bin/rails db:prepare && bin/rails server -b 0.0.0.0"
     healthcheck: *web-healthcheck
 
   orders-listener:
     <<: *rails
     build: ./orders
-    volumes: ["./orders:/app"]
     command: bin/rails events:listen
     depends_on:
       orders: { condition: service_healthy }
@@ -75,14 +70,12 @@ services:
   payments:
     <<: *rails
     build: ./payments
-    volumes: ["./payments:/app"]
     command: sh -c "bin/rails db:prepare && bin/rails server -b 0.0.0.0"
     healthcheck: *web-healthcheck
 
   payments-listener:
     <<: *rails
     build: ./payments
-    volumes: ["./payments:/app"]
     command: bin/rails events:listen
     depends_on:
       payments: { condition: service_healthy }
@@ -91,13 +84,11 @@ services:
   expiration:
     <<: *rails
     build: ./expiration
-    volumes: ["./expiration:/app"]
     command: bin/rails events:listen
 
   expiration-worker:
     <<: *rails
     build: ./expiration
-    volumes: ["./expiration:/app"]
     command: bundle exec sidekiq
 
   client:
