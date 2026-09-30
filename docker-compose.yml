@@ -1,0 +1,112 @@
+x-rails: &rails
+  env_file: .env
+  environment:
+    REDIS_URL: redis://redis:6379
+  depends_on:
+    postgres: { condition: service_healthy }
+    redis: { condition: service_healthy }
+
+x-web-healthcheck: &web-healthcheck
+  test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/3000'"]
+  interval: 2s
+  retries: 60
+
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ./volumes/pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 2s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - ./volumes/redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      retries: 30
+
+  auth:
+    <<: *rails
+    build: ./auth
+    volumes: ["./auth:/app"]
+    command: sh -c "bin/rails db:prepare && bin/rails server -b 0.0.0.0"
+    healthcheck: *web-healthcheck
+
+  tickets:
+    <<: *rails
+    build: ./tickets
+    volumes: ["./tickets:/app"]
+    command: sh -c "bin/rails db:prepare && bin/rails server -b 0.0.0.0"
+    healthcheck: *web-healthcheck
+
+  tickets-listener:
+    <<: *rails
+    build: ./tickets
+    volumes: ["./tickets:/app"]
+    command: bin/rails events:listen
+    depends_on:
+      tickets: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  orders:
+    <<: *rails
+    build: ./orders
+    volumes: ["./orders:/app"]
+    command: sh -c "bin/rails db:prepare && bin/rails server -b 0.0.0.0"
+    healthcheck: *web-healthcheck
+
+  orders-listener:
+    <<: *rails
+    build: ./orders
+    volumes: ["./orders:/app"]
+    command: bin/rails events:listen
+    depends_on:
+      orders: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  payments:
+    <<: *rails
+    build: ./payments
+    volumes: ["./payments:/app"]
+    command: sh -c "bin/rails db:prepare && bin/rails server -b 0.0.0.0"
+    healthcheck: *web-healthcheck
+
+  payments-listener:
+    <<: *rails
+    build: ./payments
+    volumes: ["./payments:/app"]
+    command: bin/rails events:listen
+    depends_on:
+      payments: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  expiration:
+    <<: *rails
+    build: ./expiration
+    volumes: ["./expiration:/app"]
+    command: bin/rails events:listen
+
+  expiration-worker:
+    <<: *rails
+    build: ./expiration
+    volumes: ["./expiration:/app"]
+    command: bundle exec sidekiq
+
+  client:
+    build: ./client
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on: [auth, tickets, orders, payments, client]
