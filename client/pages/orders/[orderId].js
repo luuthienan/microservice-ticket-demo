@@ -30,7 +30,7 @@ const PaymentForm = ({ orderId, onPaid }) => {
   const [cardError, setCardError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const { doRequest, errors } = useRequest({
-    url: "/api/payments",
+    url: "/api/v1/payments",
     method: "post",
     body: { orderId },
     onSuccess: onPaid,
@@ -111,7 +111,7 @@ const OrderShow = ({ order }) => {
 
 OrderShow.getInitialProps = async (context, client, currentUser) => {
   const { orderId } = context.query;
-  const { data } = await client.get(`/api/orders/${orderId}`);
+  const { data } = await client.get(`/api/v1/orders/${orderId}`);
 
   return { order: data };
 };

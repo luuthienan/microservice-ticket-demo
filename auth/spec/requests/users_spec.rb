@@ -2,10 +2,10 @@ require "rails_helper"
 
 RSpec.describe "Users", type: :request do
   def signup(email: "test@test.com", password: "password")
-    post "/api/users/signup", params: { email:, password: }, as: :json
+    post "/api/v1/users/signup", params: { email:, password: }, as: :json
   end
 
-  describe "POST /api/users/signup" do
+  describe "POST /api/v1/users/signup" do
     it "creates a user and sets the jwt cookie" do
       signup
 
@@ -37,33 +37,33 @@ RSpec.describe "Users", type: :request do
     end
   end
 
-  describe "POST /api/users/signin" do
+  describe "POST /api/v1/users/signin" do
     before { signup }
 
     it "signs in with valid credentials" do
-      post "/api/users/signin", params: { email: "test@test.com", password: "password" }, as: :json
+      post "/api/v1/users/signin", params: { email: "test@test.com", password: "password" }, as: :json
 
       expect(response).to have_http_status(:ok)
       expect(response.headers["Set-Cookie"]).to include("jwt=")
     end
 
     it "rejects a wrong password" do
-      post "/api/users/signin", params: { email: "test@test.com", password: "wrong" }, as: :json
+      post "/api/v1/users/signin", params: { email: "test@test.com", password: "wrong" }, as: :json
 
       expect(response).to have_http_status(:bad_request)
       expect(response.parsed_body["errors"].first["message"]).to eq("Invalid credentials")
     end
 
     it "rejects an unknown email" do
-      post "/api/users/signin", params: { email: "x@test.com", password: "password" }, as: :json
+      post "/api/v1/users/signin", params: { email: "x@test.com", password: "password" }, as: :json
 
       expect(response).to have_http_status(:bad_request)
     end
   end
 
-  describe "POST /api/users/signout" do
+  describe "POST /api/v1/users/signout" do
     it "clears the jwt cookie" do
-      post "/api/users/signout"
+      post "/api/v1/users/signout"
 
       expect(response).to have_http_status(:ok)
       expect(response.headers["Set-Cookie"]).to include("jwt=;")
@@ -72,22 +72,22 @@ RSpec.describe "Users", type: :request do
     it "expires the cookie on the same path it was set on" do
       signup
       set_path = response.headers["Set-Cookie"][/path=[^;]+/i]
-      post "/api/users/signout"
+      post "/api/v1/users/signout"
 
       expect(response.headers["Set-Cookie"][/path=[^;]+/i]).to eq(set_path)
     end
   end
 
-  describe "GET /api/users/currentuser" do
+  describe "GET /api/v1/users/currentuser" do
     it "returns the signed-in user" do
       signup
-      get "/api/users/currentuser"
+      get "/api/v1/users/currentuser"
 
       expect(response.parsed_body["currentUser"]).to include("email" => "test@test.com")
     end
 
     it "returns null when signed out" do
-      get "/api/users/currentuser"
+      get "/api/v1/users/currentuser"
 
       expect(response.parsed_body).to eq("currentUser" => nil)
     end

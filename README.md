@@ -12,7 +12,7 @@ It is a rewrite of the Node.js `ticketing` demo; the Next.js client is unchanged
 | `expiration` | Fires `expiration:complete` when an order's time is up (Sidekiq) | none            |
 | `client`     | Next.js frontend                                               |                   |
 
-`nginx` routes `/api/users`, `/api/tickets`, `/api/orders` and `/api/payments` to the services and everything else to the client.
+`nginx` routes `/api/v1/users`, `/api/v1/tickets`, `/api/v1/orders` and `/api/v1/payments` to the services and everything else to the client.
 
 ## Events
 

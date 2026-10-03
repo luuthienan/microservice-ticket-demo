@@ -8,15 +8,15 @@ RSpec.describe "Orders", type: :request do
     Order.create!(user_id:, ticket:, expires_at: 15.minutes.from_now)
   end
 
-  describe "POST /api/orders" do
+  describe "POST /api/v1/orders" do
     it "requires sign in" do
-      post "/api/orders", params: { ticketId: ticket.id }, as: :json
+      post "/api/v1/orders", params: { ticketId: ticket.id }, as: :json
 
       expect(response).to have_http_status(:unauthorized)
     end
 
     it "returns 404 for an unknown ticket" do
-      post "/api/orders", params: { ticketId: SecureRandom.uuid }, headers: sign_in_as(user_id), as: :json
+      post "/api/v1/orders", params: { ticketId: SecureRandom.uuid }, headers: sign_in_as(user_id), as: :json
 
       expect(response).to have_http_status(:not_found)
     end
@@ -24,14 +24,14 @@ RSpec.describe "Orders", type: :request do
     it "rejects a reserved ticket" do
       create_order(user_id: SecureRandom.uuid)
 
-      post "/api/orders", params: { ticketId: ticket.id }, headers: sign_in_as(user_id), as: :json
+      post "/api/v1/orders", params: { ticketId: ticket.id }, headers: sign_in_as(user_id), as: :json
 
       expect(response).to have_http_status(:bad_request)
       expect(response.parsed_body["errors"].first["message"]).to eq("Ticket is already reserved")
     end
 
     it "creates an order and publishes order:created" do
-      post "/api/orders", params: { ticketId: ticket.id }, headers: sign_in_as(user_id), as: :json
+      post "/api/v1/orders", params: { ticketId: ticket.id }, headers: sign_in_as(user_id), as: :json
 
       expect(response).to have_http_status(:created)
       order = Order.last
@@ -41,45 +41,45 @@ RSpec.describe "Orders", type: :request do
     end
   end
 
-  describe "GET /api/orders" do
+  describe "GET /api/v1/orders" do
     it "lists only the signed-in user's orders" do
       mine = create_order
       create_order(user_id: SecureRandom.uuid, ticket: Ticket.create!(title: "game", price: 10))
 
-      get "/api/orders", headers: sign_in_as(user_id)
+      get "/api/v1/orders", headers: sign_in_as(user_id)
 
       expect(response.parsed_body.map { |o| o["id"] }).to eq([mine.id])
       expect(response.parsed_body.first["ticket"]).to include("title" => "concert")
     end
   end
 
-  describe "GET /api/orders/:id" do
+  describe "GET /api/v1/orders/:id" do
     it "returns the order" do
       order = create_order
 
-      get "/api/orders/#{order.id}", headers: sign_in_as(user_id)
+      get "/api/v1/orders/#{order.id}", headers: sign_in_as(user_id)
 
       expect(response.parsed_body).to include("id" => order.id, "status" => "created")
     end
 
     it "rejects another user's order" do
-      get "/api/orders/#{create_order.id}", headers: sign_in_as
+      get "/api/v1/orders/#{create_order.id}", headers: sign_in_as
 
       expect(response).to have_http_status(:unauthorized)
     end
 
     it "returns 404 for an unknown order" do
-      get "/api/orders/#{SecureRandom.uuid}", headers: sign_in_as(user_id)
+      get "/api/v1/orders/#{SecureRandom.uuid}", headers: sign_in_as(user_id)
 
       expect(response).to have_http_status(:not_found)
     end
   end
 
-  describe "DELETE /api/orders/:id" do
+  describe "DELETE /api/v1/orders/:id" do
     it "cancels the order and publishes order:cancelled" do
       order = create_order
 
-      delete "/api/orders/#{order.id}", headers: sign_in_as(user_id)
+      delete "/api/v1/orders/#{order.id}", headers: sign_in_as(user_id)
 
       expect(response).to have_http_status(:no_content)
       expect(order.reload).to be_cancelled
@@ -88,13 +88,13 @@ RSpec.describe "Orders", type: :request do
     end
 
     it "rejects another user's order" do
-      delete "/api/orders/#{create_order.id}", headers: sign_in_as
+      delete "/api/v1/orders/#{create_order.id}", headers: sign_in_as
 
       expect(response).to have_http_status(:unauthorized)
     end
 
     it "returns 404 for an unknown order" do
-      delete "/api/orders/#{SecureRandom.uuid}", headers: sign_in_as(user_id)
+      delete "/api/v1/orders/#{SecureRandom.uuid}", headers: sign_in_as(user_id)
 
       expect(response).to have_http_status(:not_found)
     end

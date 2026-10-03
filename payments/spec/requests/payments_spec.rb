@@ -7,11 +7,11 @@ RSpec.describe "Payments", type: :request do
   before { allow(Stripe::Charge).to receive(:create).and_return(double(id: "ch_123")) }
 
   def pay(order_id: order.id, user: user_id)
-    post "/api/payments", params: { orderId: order_id, token: "tok_visa" }, headers: sign_in_as(user), as: :json
+    post "/api/v1/payments", params: { orderId: order_id, token: "tok_visa" }, headers: sign_in_as(user), as: :json
   end
 
   it "requires sign in" do
-    post "/api/payments", params: { orderId: order.id, token: "tok_visa" }, as: :json
+    post "/api/v1/payments", params: { orderId: order.id, token: "tok_visa" }, as: :json
 
     expect(response).to have_http_status(:unauthorized)
   end
