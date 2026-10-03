@@ -10,41 +10,41 @@ RSpec.describe "Orders", type: :request do
 
   describe "POST /api/v1/orders" do
     it "requires sign in" do
-      post "/api/v1/orders", params: { ticketId: ticket.id }, as: :json
+      post "/api/v1/orders", params: { ticket_id: ticket.id }, as: :json
 
       expect(response).to have_http_status(:unauthorized)
     end
 
     it "rejects a token whose id claim is not an integer" do
-      post "/api/v1/orders", params: { ticketId: ticket.id }, headers: sign_in_as(SecureRandom.uuid), as: :json
+      post "/api/v1/orders", params: { ticket_id: ticket.id }, headers: sign_in_as(SecureRandom.uuid), as: :json
 
       expect(response).to have_http_status(:unauthorized)
     end
 
     it "returns 404 for an unknown ticket" do
-      post "/api/v1/orders", params: { ticketId: next_id }, headers: sign_in_as(user_id), as: :json
+      post "/api/v1/orders", params: { ticket_id: next_id }, headers: sign_in_as(user_id), as: :json
 
       expect(response).to have_http_status(:not_found)
     end
 
-    it "rejects a missing ticketId" do
+    it "rejects a missing ticket_id" do
       post "/api/v1/orders", params: {}, headers: sign_in_as(user_id), as: :json
 
       expect(response).to have_http_status(:bad_request)
-      expect(response.parsed_body["errors"]).to eq([{ "message" => "Ticket can't be blank", "field" => "ticketId" }])
+      expect(response.parsed_body["errors"]).to eq([{ "message" => "Ticket can't be blank", "field" => "ticket_id" }])
     end
 
     it "rejects a reserved ticket" do
       create_order(user_id: next_id)
 
-      post "/api/v1/orders", params: { ticketId: ticket.id }, headers: sign_in_as(user_id), as: :json
+      post "/api/v1/orders", params: { ticket_id: ticket.id }, headers: sign_in_as(user_id), as: :json
 
       expect(response).to have_http_status(:bad_request)
       expect(response.parsed_body["errors"].first["message"]).to eq("Ticket is already reserved")
     end
 
     it "creates an order and publishes order:created" do
-      post "/api/v1/orders", params: { ticketId: ticket.id }, headers: sign_in_as(user_id), as: :json
+      post "/api/v1/orders", params: { ticket_id: ticket.id }, headers: sign_in_as(user_id), as: :json
 
       expect(response).to have_http_status(:created)
       order = Order.last
@@ -72,7 +72,9 @@ RSpec.describe "Orders", type: :request do
 
       get "/api/v1/orders/#{order.id}", headers: sign_in_as(user_id)
 
-      expect(response.parsed_body).to include("id" => order.id, "status" => "created")
+      expect(response.parsed_body).to include("id" => order.id, "status" => "created", "user_id" => user_id)
+      expect(response.parsed_body.keys).to match_array(%w[id status user_id expires_at version ticket])
+      expect(response.parsed_body["ticket"]).to eq("id" => ticket.id, "title" => "concert", "price" => "20.00")
     end
 
     it "rejects another user's order" do

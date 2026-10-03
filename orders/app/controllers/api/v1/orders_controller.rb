@@ -13,7 +13,7 @@ class Api::V1::OrdersController < ApplicationController
   end
 
   def create
-    validator = CreateOrderValidator.new(ticket_id: params[:ticketId])
+    validator = CreateOrderValidator.new(ticket_id: params[:ticket_id])
     return render_validation_errors(validator) unless validator.valid?
 
     service = OrderCreation.new(ticket_id: validator.ticket_id, user_id: current_user["id"])

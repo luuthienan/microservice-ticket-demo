@@ -5,8 +5,4 @@ class Ticket < ApplicationRecord
   def reserved?
     orders.where.not(status: :cancelled).exists?
   end
-
-  def as_json(*)
-    { id:, title:, price: price.to_f }
-  end
 end
