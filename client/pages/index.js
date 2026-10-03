@@ -18,7 +18,14 @@ const LandingPage = ({ currentUser, tickets }) => {
 
   return (
     <div>
-      <h1>Tickets</h1>
+      <div className="d-flex justify-content-between align-items-center">
+        <h1>Tickets</h1>
+        {currentUser && (
+          <Link href="/tickets/new" className="btn btn-primary">
+            New Ticket
+          </Link>
+        )}
+      </div>
       <table className="table">
         <thead>
           <tr>
