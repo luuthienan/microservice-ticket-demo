@@ -29,7 +29,7 @@ class Api::V1::UsersController < ApplicationController
   end
 
   def current
-    render json: { currentUser: current_user }
+    render json: { current_user: current_user }
   end
 
   private
