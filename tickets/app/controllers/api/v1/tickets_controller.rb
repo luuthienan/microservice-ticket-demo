@@ -10,18 +10,21 @@ class Api::V1::TicketsController < ApplicationController
   end
 
   def create
-    ticket = Ticket.create!(ticket_params.merge(user_id: current_user["id"]))
-    Events.publish("ticket:created", ticket.event_data)
+    validator = CreateTicketValidator.new(ticket_params)
+    return render_validation_errors(validator) unless validator.valid?
+
+    ticket = TicketCreation.new(title: validator.title, price: validator.price, user_id: current_user["id"]).call
     render json: ticket, status: :created
   end
 
   def update
-    ticket = Ticket.find(params[:id])
-    raise ApiError::NotAuthorized unless ticket.user_id == current_user["id"]
-    raise ApiError, "Cannot edit a reserved ticket" if ticket.reserved?
+    validator = UpdateTicketValidator.new(ticket_params)
+    return render_validation_errors(validator) unless validator.valid?
 
-    ticket.update!(ticket_params)
-    ticket.publish_updated
+    service = TicketUpdate.new(ticket_id: params[:id], user_id: current_user["id"], attributes: ticket_params.to_h)
+    ticket = service.call
+    return render_validation_errors(service) unless ticket
+
     render json: ticket
   end
 
