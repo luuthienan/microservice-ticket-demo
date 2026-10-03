@@ -1,3 +1,7 @@
 Rails.application.routes.draw do
-  post "/api/v1/payments", to: "payments#create"
+  namespace :api do
+    namespace :v1 do
+      resources :payments, only: :create
+    end
+  end
 end

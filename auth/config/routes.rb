@@ -1,6 +1,14 @@
 Rails.application.routes.draw do
-  post "/api/v1/users/signup", to: "users#signup"
-  post "/api/v1/users/signin", to: "users#signin"
-  post "/api/v1/users/signout", to: "users#signout"
-  get "/api/v1/users/currentuser", to: "users#current"
+  namespace :api do
+    namespace :v1 do
+      resources :users, only: [] do
+        collection do
+          post :signup
+          post :signin
+          post :signout
+          get :currentuser, action: :current
+        end
+      end
+    end
+  end
 end

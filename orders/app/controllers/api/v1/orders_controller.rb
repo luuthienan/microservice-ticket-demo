@@ -1,4 +1,4 @@
-class OrdersController < ApplicationController
+class Api::V1::OrdersController < ApplicationController
   EXPIRATION_WINDOW = 15.minutes
 
   before_action :require_auth
