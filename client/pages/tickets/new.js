@@ -59,4 +59,17 @@ const NewTicket = () => {
   );
 };
 
+NewTicket.getInitialProps = async (context, client, currentUser) => {
+  if (!currentUser) {
+    if (context.res) {
+      context.res.writeHead(302, { Location: '/auth/signin' });
+      context.res.end();
+    } else {
+      Router.replace('/auth/signin');
+    }
+  }
+
+  return {};
+};
+
 export default NewTicket;
