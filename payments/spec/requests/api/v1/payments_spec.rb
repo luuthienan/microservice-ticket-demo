@@ -28,6 +28,14 @@ RSpec.describe "Payments", type: :request do
     expect(response).to have_http_status(:unauthorized)
   end
 
+  it "rejects a missing orderId or token" do
+    post "/api/v1/payments", params: {}, headers: sign_in_as(user_id), as: :json
+
+    expect(response).to have_http_status(:bad_request)
+    expect(response.parsed_body["errors"].map { |e| e["field"] }).to eq(%w[orderId token])
+    expect(Stripe::Charge).not_to have_received(:create)
+  end
+
   it "rejects a cancelled order" do
     order.cancelled!
 
