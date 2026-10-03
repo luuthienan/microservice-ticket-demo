@@ -68,6 +68,14 @@ RSpec.describe "Users", type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.headers["Set-Cookie"]).to include("jwt=;")
     end
+
+    it "expires the cookie on the same path it was set on" do
+      signup
+      set_path = response.headers["Set-Cookie"][/path=[^;]+/i]
+      post "/api/users/signout"
+
+      expect(response.headers["Set-Cookie"][/path=[^;]+/i]).to eq(set_path)
+    end
   end
 
   describe "GET /api/users/currentuser" do

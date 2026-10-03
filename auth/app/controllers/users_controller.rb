@@ -14,7 +14,7 @@ class UsersController < ApplicationController
   end
 
   def signout
-    response.delete_cookie("jwt")
+    response.delete_cookie("jwt", path: "/")
     render json: {}
   end
 
