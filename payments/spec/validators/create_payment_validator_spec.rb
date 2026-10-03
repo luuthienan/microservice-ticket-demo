@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe CreatePaymentValidator do
   it "is valid with an order id and a token" do
-    expect(described_class.new(order_id: SecureRandom.uuid, token: "tok_visa")).to be_valid
+    expect(described_class.new(order_id: next_id, token: "tok_visa")).to be_valid
   end
 
   it "requires both" do

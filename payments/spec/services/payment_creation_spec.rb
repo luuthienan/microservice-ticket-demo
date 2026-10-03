@@ -1,8 +1,8 @@
 require "rails_helper"
 
 RSpec.describe PaymentCreation do
-  let(:user_id) { SecureRandom.uuid }
-  let(:order) { Order.create!(user_id:, price: 20.5, status: :created) }
+  let(:user_id) { next_id }
+  let(:order) { Order.create!(id: next_id, user_id:, price: 20.5, status: :created) }
 
   before { allow(Stripe::Charge).to receive(:create).and_return(double(id: "ch_123")) }
 
@@ -37,12 +37,12 @@ RSpec.describe PaymentCreation do
   end
 
   it "rejects another user's order before charging" do
-    expect { service(user_id: SecureRandom.uuid).call }.to raise_error(ApiError::NotAuthorized)
+    expect { service(user_id: next_id).call }.to raise_error(ApiError::NotAuthorized)
     expect(Stripe::Charge).not_to have_received(:create)
   end
 
   it "raises RecordNotFound for an unknown order" do
-    expect { service(order_id: SecureRandom.uuid).call }.to raise_error(ActiveRecord::RecordNotFound)
+    expect { service(order_id: next_id).call }.to raise_error(ActiveRecord::RecordNotFound)
   end
 
   it "lets a declined card propagate and saves nothing" do
