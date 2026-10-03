@@ -16,6 +16,14 @@ class ApplicationController < ActionController::API
 
   private
 
+  # Renders the errors of a validator or service (anything ActiveModel::Errors-backed) as a 400.
+  def render_validation_errors(model)
+    errors = model.errors.map do |e|
+      e.attribute == :base ? { message: e.message } : { message: e.full_message, field: e.attribute.to_s.camelize(:lower) }
+    end
+    render_errors errors, 400
+  end
+
   def render_errors(errors, status)
     render json: { errors: }, status:
   end
