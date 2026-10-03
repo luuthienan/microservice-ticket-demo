@@ -1,3 +1,7 @@
 Rails.application.routes.draw do
-  resources :orders, path: "/api/v1/orders", only: %i[index show create destroy]
+  namespace :api do
+    namespace :v1 do
+      resources :orders, only: %i[index show create destroy]
+    end
+  end
 end

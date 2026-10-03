@@ -1,4 +1,4 @@
-class TicketsController < ApplicationController
+class Api::V1::TicketsController < ApplicationController
   before_action :require_auth, only: %i[create update]
 
   def index
