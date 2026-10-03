@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe TicketRelease do
-  let!(:ticket) { Ticket.create!(title: "concert", price: 20, user_id: SecureRandom.uuid, order_id: SecureRandom.uuid) }
+  let!(:ticket) { Ticket.create!(title: "concert", price: 20, user_id: next_id, order_id: next_id) }
 
   it "clears the order and publishes ticket:updated" do
     described_class.new(ticket_id: ticket.id).call

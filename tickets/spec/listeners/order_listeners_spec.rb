@@ -1,8 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "order listeners" do
-  let(:order_id) { SecureRandom.uuid }
-  let!(:ticket) { Ticket.create!(title: "concert", price: 20, user_id: SecureRandom.uuid) }
+  let(:order_id) { next_id }
+  let!(:ticket) { Ticket.create!(title: "concert", price: 20, user_id: next_id) }
   let(:data) { { "id" => order_id, "ticket" => { "id" => ticket.id } } }
 
   describe OrderCreatedListener do

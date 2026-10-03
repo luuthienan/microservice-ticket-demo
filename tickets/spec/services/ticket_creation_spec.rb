@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe TicketCreation do
   it "creates the ticket and publishes ticket:created" do
-    user_id = SecureRandom.uuid
+    user_id = next_id
 
     ticket = described_class.new(title: "concert", price: 10, user_id:).call
 
