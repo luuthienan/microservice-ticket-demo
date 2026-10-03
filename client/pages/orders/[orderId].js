@@ -32,7 +32,7 @@ const PaymentForm = ({ orderId, onPaid }) => {
   const { doRequest, errors } = useRequest({
     url: "/api/v1/payments",
     method: "post",
-    body: { orderId },
+    body: { order_id: orderId },
     onSuccess: onPaid,
   });
 
@@ -66,7 +66,7 @@ const PaymentForm = ({ orderId, onPaid }) => {
 };
 
 const OrderShow = ({ order }) => {
-  const secondsLeft = useSecondsLeft(order.expiresAt);
+  const secondsLeft = useSecondsLeft(order.expires_at);
   const [paid, setPaid] = useState(false);
 
   const renderPayment = () => {
