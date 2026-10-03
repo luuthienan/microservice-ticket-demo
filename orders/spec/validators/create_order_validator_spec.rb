@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe CreateOrderValidator do
   it "is valid with a ticket id" do
-    expect(described_class.new(ticket_id: SecureRandom.uuid)).to be_valid
+    expect(described_class.new(ticket_id: next_id)).to be_valid
   end
 
   it "requires a ticket id" do

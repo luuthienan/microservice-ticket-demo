@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe TicketCopyUpdate do
-  let!(:ticket) { Ticket.create!(title: "concert", price: 20, version: 0) }
+  let!(:ticket) { Ticket.create!(id: next_id, title: "concert", price: 20, version: 0) }
 
   it "applies the next version" do
     described_class.new(id: ticket.id, title: "game", price: 30, version: 1).call

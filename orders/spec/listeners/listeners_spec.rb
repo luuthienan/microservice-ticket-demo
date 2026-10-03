@@ -1,14 +1,14 @@
 require "rails_helper"
 
 RSpec.describe "listeners" do
-  let(:ticket_id) { SecureRandom.uuid }
+  let(:ticket_id) { next_id }
 
   def ticket_event(version:, title: "concert", price: 20)
     { "id" => ticket_id, "title" => title, "price" => price, "version" => version }
   end
 
   def create_order(status: :created)
-    Order.create!(user_id: SecureRandom.uuid, ticket: Ticket.find(ticket_id), status:, expires_at: 15.minutes.from_now)
+    Order.create!(user_id: next_id, ticket: Ticket.find(ticket_id), status:, expires_at: 15.minutes.from_now)
   end
 
   describe TicketCreatedListener do

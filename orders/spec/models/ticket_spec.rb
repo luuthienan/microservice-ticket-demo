@@ -1,8 +1,8 @@
 require "rails_helper"
 
 RSpec.describe Ticket do
-  let(:ticket) { Ticket.create!(title: "concert", price: 20) }
-  let(:order_attrs) { { user_id: SecureRandom.uuid, ticket:, expires_at: 15.minutes.from_now } }
+  let(:ticket) { Ticket.create!(id: next_id, title: "concert", price: 20) }
+  let(:order_attrs) { { user_id: next_id, ticket:, expires_at: 15.minutes.from_now } }
 
   describe "#reserved?" do
     it "is false without orders" do

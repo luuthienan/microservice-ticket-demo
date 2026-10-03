@@ -1,8 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "Orders", type: :request do
-  let(:user_id) { SecureRandom.uuid }
-  let(:ticket) { Ticket.create!(title: "concert", price: 20) }
+  let(:user_id) { next_id }
+  let(:ticket) { Ticket.create!(id: next_id, title: "concert", price: 20) }
 
   def create_order(user_id: self.user_id, ticket: self.ticket)
     Order.create!(user_id:, ticket:, expires_at: 15.minutes.from_now)
@@ -15,8 +15,14 @@ RSpec.describe "Orders", type: :request do
       expect(response).to have_http_status(:unauthorized)
     end
 
+    it "rejects a token whose id claim is not an integer" do
+      post "/api/v1/orders", params: { ticketId: ticket.id }, headers: sign_in_as(SecureRandom.uuid), as: :json
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
     it "returns 404 for an unknown ticket" do
-      post "/api/v1/orders", params: { ticketId: SecureRandom.uuid }, headers: sign_in_as(user_id), as: :json
+      post "/api/v1/orders", params: { ticketId: next_id }, headers: sign_in_as(user_id), as: :json
 
       expect(response).to have_http_status(:not_found)
     end
@@ -29,7 +35,7 @@ RSpec.describe "Orders", type: :request do
     end
 
     it "rejects a reserved ticket" do
-      create_order(user_id: SecureRandom.uuid)
+      create_order(user_id: next_id)
 
       post "/api/v1/orders", params: { ticketId: ticket.id }, headers: sign_in_as(user_id), as: :json
 
@@ -51,7 +57,7 @@ RSpec.describe "Orders", type: :request do
   describe "GET /api/v1/orders" do
     it "lists only the signed-in user's orders" do
       mine = create_order
-      create_order(user_id: SecureRandom.uuid, ticket: Ticket.create!(title: "game", price: 10))
+      create_order(user_id: next_id, ticket: Ticket.create!(id: next_id, title: "game", price: 10))
 
       get "/api/v1/orders", headers: sign_in_as(user_id)
 
@@ -76,7 +82,7 @@ RSpec.describe "Orders", type: :request do
     end
 
     it "returns 404 for an unknown order" do
-      get "/api/v1/orders/#{SecureRandom.uuid}", headers: sign_in_as(user_id)
+      get "/api/v1/orders/#{next_id}", headers: sign_in_as(user_id)
 
       expect(response).to have_http_status(:not_found)
     end
@@ -96,7 +102,7 @@ RSpec.describe "Orders", type: :request do
 
     it "rejects cancelling an order that is already cancelled or complete" do
       %i[cancelled complete].each do |status|
-        order = create_order(ticket: Ticket.create!(title: status.to_s, price: 1))
+        order = create_order(ticket: Ticket.create!(id: next_id, title: status.to_s, price: 1))
         order.update!(status:)
 
         delete "/api/v1/orders/#{order.id}", headers: sign_in_as(user_id)
@@ -115,7 +121,7 @@ RSpec.describe "Orders", type: :request do
     end
 
     it "returns 404 for an unknown order" do
-      delete "/api/v1/orders/#{SecureRandom.uuid}", headers: sign_in_as(user_id)
+      delete "/api/v1/orders/#{next_id}", headers: sign_in_as(user_id)
 
       expect(response).to have_http_status(:not_found)
     end
