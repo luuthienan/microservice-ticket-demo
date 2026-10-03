@@ -1,0 +1,34 @@
+require "rails_helper"
+
+RSpec.describe OrderCreation do
+  let(:user_id) { SecureRandom.uuid }
+  let(:ticket) { Ticket.create!(title: "concert", price: 20) }
+
+  def call(ticket_id: ticket.id) = described_class.new(ticket_id:, user_id:)
+
+  it "creates an order expiring in 15 minutes and publishes order:created" do
+    order = call.call
+
+    expect(order).to have_attributes(user_id:, status: "created", ticket:)
+    expect(order.expires_at).to be_within(1.minute).of(15.minutes.from_now)
+    expect(Events).to have_received(:publish).with(
+      "order:created",
+      { id: order.id, version: 0, status: "created", user_id:, expires_at: order.expires_at.iso8601,
+        ticket: { id: ticket.id, price: ticket.price } }
+    )
+  end
+
+  it "fails with an error when the ticket is already reserved" do
+    Order.create!(user_id: SecureRandom.uuid, ticket:, expires_at: 15.minutes.from_now)
+    service = call
+
+    expect(service.call).to be(false)
+    expect(service.errors.full_messages).to eq(["Ticket is already reserved"])
+    expect(Order.count).to eq(1)
+    expect(Events).not_to have_received(:publish)
+  end
+
+  it "raises RecordNotFound for an unknown ticket" do
+    expect { call(ticket_id: SecureRandom.uuid).call }.to raise_error(ActiveRecord::RecordNotFound)
+  end
+end

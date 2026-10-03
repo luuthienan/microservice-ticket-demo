@@ -3,6 +3,6 @@ class ExpirationCompleteListener
 
   def handle(data)
     order = Order.find(data["order_id"])
-    order.cancel! if order.created?
+    OrderCancellation.new(order:).call if order.created?
   end
 end

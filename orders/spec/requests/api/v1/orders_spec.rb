@@ -21,6 +21,13 @@ RSpec.describe "Orders", type: :request do
       expect(response).to have_http_status(:not_found)
     end
 
+    it "rejects a missing ticketId" do
+      post "/api/v1/orders", params: {}, headers: sign_in_as(user_id), as: :json
+
+      expect(response).to have_http_status(:bad_request)
+      expect(response.parsed_body["errors"]).to eq([{ "message" => "Ticket can't be blank", "field" => "ticketId" }])
+    end
+
     it "rejects a reserved ticket" do
       create_order(user_id: SecureRandom.uuid)
 
