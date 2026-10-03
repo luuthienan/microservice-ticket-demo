@@ -24,7 +24,9 @@ class Api::V1::OrdersController < ApplicationController
   end
 
   def destroy
-    OrderCancellation.new(order: Order.find(params[:id]), user_id: current_user["id"]).call
+    service = OrderCancellation.new(order: Order.find(params[:id]), user_id: current_user["id"])
+    return render_validation_errors(service) unless service.call
+
     head :no_content
   end
 end

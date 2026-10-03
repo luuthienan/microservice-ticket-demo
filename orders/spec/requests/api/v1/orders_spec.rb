@@ -94,6 +94,20 @@ RSpec.describe "Orders", type: :request do
         .with("order:cancelled", { id: order.id, version: 1, ticket: { id: ticket.id } })
     end
 
+    it "rejects cancelling an order that is already cancelled or complete" do
+      %i[cancelled complete].each do |status|
+        order = create_order(ticket: Ticket.create!(title: status.to_s, price: 1))
+        order.update!(status:)
+
+        delete "/api/v1/orders/#{order.id}", headers: sign_in_as(user_id)
+
+        expect(response).to have_http_status(:bad_request)
+        expect(response.parsed_body["errors"].first["message"]).to eq("Order cannot be cancelled")
+        expect(order.reload.status).to eq(status.to_s)
+      end
+      expect(Events).not_to have_received(:publish)
+    end
+
     it "rejects another user's order" do
       delete "/api/v1/orders/#{create_order.id}", headers: sign_in_as
 
