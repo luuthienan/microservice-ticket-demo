@@ -19,6 +19,16 @@ RSpec.describe OrderCancellation do
     expect(order.reload).to be_cancelled
   end
 
+  it "fails with an error when the order is not created" do
+    order.complete!
+    service = described_class.new(order:, user_id:)
+
+    expect(service.call).to be(false)
+    expect(service.errors.full_messages).to eq(["Order cannot be cancelled"])
+    expect(order.reload).to be_complete
+    expect(Events).not_to have_received(:publish)
+  end
+
   it "rejects another user's order" do
     expect { described_class.new(order:, user_id: SecureRandom.uuid).call }.to raise_error(ApiError::NotAuthorized)
 
