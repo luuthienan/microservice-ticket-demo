@@ -25,7 +25,7 @@ RSpec.describe "Tickets", type: :request do
 
       get "/api/v1/tickets/#{ticket.id}"
 
-      expect(response.parsed_body).to include("title" => "concert", "price" => 20.0, "userId" => user_id)
+      expect(response.parsed_body).to include("title" => "concert", "price" => "20.00", "user_id" => user_id)
     end
 
     it "returns 404 for an unknown ticket" do
