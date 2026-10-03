@@ -44,6 +44,7 @@ RSpec.describe "Users", type: :request do
       post "/api/v1/users/signin", params: { email: "test@test.com", password: "password" }, as: :json
 
       expect(response).to have_http_status(:ok)
+      expect(response.parsed_body.keys).to match_array(%w[id email])
       expect(response.headers["Set-Cookie"]).to include("jwt=")
     end
 
@@ -83,13 +84,14 @@ RSpec.describe "Users", type: :request do
       signup
       get "/api/v1/users/currentuser"
 
-      expect(response.parsed_body["currentUser"]).to include("email" => "test@test.com")
+      expect(response.parsed_body["current_user"]).to include("email" => "test@test.com")
+      expect(response.parsed_body["current_user"]).not_to have_key("password_digest")
     end
 
     it "returns null when signed out" do
       get "/api/v1/users/currentuser"
 
-      expect(response.parsed_body).to eq("currentUser" => nil)
+      expect(response.parsed_body).to eq("current_user" => nil)
     end
   end
 end

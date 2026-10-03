@@ -4,6 +4,7 @@ gem "rails", "~> 8.1.4"
 gem "puma"
 gem "jwt"
 gem "pg"
+gem "active_model_serializers", "~> 0.10.16"
 gem "bcrypt"
 
 group :development, :test do
