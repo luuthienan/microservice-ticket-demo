@@ -65,5 +65,14 @@ RSpec.describe "listeners" do
 
       expect(order.reload).to be_complete
     end
+
+    it "does not revive a cancelled order" do
+      TicketCreatedListener.new.handle(ticket_event(version: 0))
+      order = create_order(status: :cancelled)
+
+      described_class.new.handle("order_id" => order.id)
+
+      expect(order.reload).to be_cancelled
+    end
   end
 end
