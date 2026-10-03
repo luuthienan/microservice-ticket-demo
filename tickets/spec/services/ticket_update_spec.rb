@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe TicketUpdate do
-  let(:user_id) { SecureRandom.uuid }
+  let(:user_id) { next_id }
   let!(:ticket) { Ticket.create!(title: "concert", price: 20, user_id:) }
 
   def service(**overrides) = described_class.new({ ticket_id: ticket.id, user_id:, attributes: { title: "new" } }.merge(overrides))
@@ -20,7 +20,7 @@ RSpec.describe TicketUpdate do
   end
 
   it "fails with an error when the ticket is reserved" do
-    ticket.update!(order_id: SecureRandom.uuid)
+    ticket.update!(order_id: next_id)
     result = service
 
     expect(result.call).to be(false)
@@ -29,10 +29,10 @@ RSpec.describe TicketUpdate do
   end
 
   it "rejects a user who does not own the ticket" do
-    expect { service(user_id: SecureRandom.uuid).call }.to raise_error(ApiError::NotAuthorized)
+    expect { service(user_id: next_id).call }.to raise_error(ApiError::NotAuthorized)
   end
 
   it "raises RecordNotFound for an unknown ticket" do
-    expect { service(ticket_id: SecureRandom.uuid).call }.to raise_error(ActiveRecord::RecordNotFound)
+    expect { service(ticket_id: next_id).call }.to raise_error(ActiveRecord::RecordNotFound)
   end
 end

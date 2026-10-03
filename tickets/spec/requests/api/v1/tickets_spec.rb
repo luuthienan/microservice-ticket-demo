@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "Tickets", type: :request do
-  let(:user_id) { SecureRandom.uuid }
+  let(:user_id) { next_id }
 
   def create_ticket(user_id: self.user_id, **attrs)
     Ticket.create!({ title: "concert", price: 20, user_id: }.merge(attrs))
@@ -29,7 +29,7 @@ RSpec.describe "Tickets", type: :request do
     end
 
     it "returns 404 for an unknown ticket" do
-      get "/api/v1/tickets/#{SecureRandom.uuid}"
+      get "/api/v1/tickets/#{next_id}"
 
       expect(response).to have_http_status(:not_found)
     end
@@ -38,6 +38,12 @@ RSpec.describe "Tickets", type: :request do
   describe "POST /api/v1/tickets" do
     it "requires sign in" do
       post "/api/v1/tickets", params: { title: "concert", price: 10 }, as: :json
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it "rejects a token whose id claim is not an integer" do
+      post "/api/v1/tickets", params: { title: "concert", price: 10 }, headers: sign_in_as(SecureRandom.uuid), as: :json
 
       expect(response).to have_http_status(:unauthorized)
     end
@@ -67,7 +73,7 @@ RSpec.describe "Tickets", type: :request do
     let!(:ticket) { create_ticket }
 
     it "returns 404 for an unknown ticket" do
-      put "/api/v1/tickets/#{SecureRandom.uuid}", params: { title: "a", price: 1 }, headers: sign_in_as(user_id), as: :json
+      put "/api/v1/tickets/#{next_id}", params: { title: "a", price: 1 }, headers: sign_in_as(user_id), as: :json
 
       expect(response).to have_http_status(:not_found)
     end
@@ -91,7 +97,7 @@ RSpec.describe "Tickets", type: :request do
     end
 
     it "rejects editing a reserved ticket" do
-      ticket.update!(order_id: SecureRandom.uuid)
+      ticket.update!(order_id: next_id)
 
       put "/api/v1/tickets/#{ticket.id}", params: { title: "a", price: 1 }, headers: sign_in_as(user_id), as: :json
 

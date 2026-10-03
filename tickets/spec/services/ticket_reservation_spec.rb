@@ -1,10 +1,10 @@
 require "rails_helper"
 
 RSpec.describe TicketReservation do
-  let!(:ticket) { Ticket.create!(title: "concert", price: 20, user_id: SecureRandom.uuid) }
+  let!(:ticket) { Ticket.create!(title: "concert", price: 20, user_id: next_id) }
 
   it "records the order on the ticket and publishes ticket:updated" do
-    order_id = SecureRandom.uuid
+    order_id = next_id
 
     described_class.new(ticket_id: ticket.id, order_id:).call
 
@@ -13,7 +13,7 @@ RSpec.describe TicketReservation do
   end
 
   it "does not publish again when the order is already recorded" do
-    order_id = SecureRandom.uuid
+    order_id = next_id
     ticket.update!(order_id:)
 
     described_class.new(ticket_id: ticket.id, order_id:).call
