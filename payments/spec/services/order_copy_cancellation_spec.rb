@@ -1,0 +1,15 @@
+require "rails_helper"
+
+RSpec.describe OrderCopyCancellation do
+  let!(:order) { Order.create!(user_id: SecureRandom.uuid, price: 20, status: :created, version: 0) }
+
+  it "cancels the copy at the next version" do
+    described_class.new(id: order.id, version: 1).call
+
+    expect(order.reload).to have_attributes(status: "cancelled", version: 1)
+  end
+
+  it "raises when a version was skipped so the event is redelivered" do
+    expect { described_class.new(id: order.id, version: 2).call }.to raise_error(ActiveRecord::RecordNotFound)
+  end
+end
