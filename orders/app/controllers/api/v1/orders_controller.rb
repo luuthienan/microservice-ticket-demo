@@ -1,6 +1,4 @@
 class Api::V1::OrdersController < ApplicationController
-  EXPIRATION_WINDOW = 15.minutes
-
   before_action :require_auth
 
   def index
@@ -8,29 +6,25 @@ class Api::V1::OrdersController < ApplicationController
   end
 
   def show
-    render json: find_order
+    order = Order.find(params[:id])
+    raise ApiError::NotAuthorized unless order.user_id == current_user["id"]
+
+    render json: order
   end
 
   def create
-    ticket = Ticket.find(params[:ticketId])
-    raise ApiError, "Ticket is already reserved" if ticket.reserved?
+    validator = CreateOrderValidator.new(ticket_id: params[:ticketId])
+    return render_validation_errors(validator) unless validator.valid?
 
-    order = Order.create!(user_id: current_user["id"], ticket:, expires_at: EXPIRATION_WINDOW.from_now)
-    Events.publish("order:created", order.event_data)
+    service = OrderCreation.new(ticket_id: validator.ticket_id, user_id: current_user["id"])
+    order = service.call
+    return render_validation_errors(service) unless order
+
     render json: order, status: :created
   end
 
   def destroy
-    find_order.cancel!
+    OrderCancellation.new(order: Order.find(params[:id]), user_id: current_user["id"]).call
     head :no_content
-  end
-
-  private
-
-  def find_order
-    order = Order.find(params[:id])
-    raise ApiError::NotAuthorized unless order.user_id == current_user["id"]
-
-    order
   end
 end
