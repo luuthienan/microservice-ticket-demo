@@ -14,6 +14,10 @@ class ApplicationController < ActionController::API
     render_errors errors, 400
   end
 
+  rescue_from Stripe::CardError do |error|
+    render_errors [{ message: error.message }], 400
+  end
+
   private
 
   def render_errors(errors, status)

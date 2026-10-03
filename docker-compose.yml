@@ -93,6 +93,8 @@ services:
 
   client:
     build: ./client
+    environment:
+      NEXT_PUBLIC_STRIPE_PUBLISH_KEY: "pk_test_51TRjuqK9bnO03OjysaFa2HlAhSDJbNDrIGsnq9t2Hm8BlihOmcuwisGOlsi9A5HBDFzu75m64aL2iVcHAop2Ll1F00IZa9qb8C"
 
   nginx:
     image: nginx:alpine

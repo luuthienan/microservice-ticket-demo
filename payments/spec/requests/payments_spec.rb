@@ -45,6 +45,17 @@ RSpec.describe "Payments", type: :request do
     expect(Payment.count).to eq(1)
   end
 
+  it "returns the card error message and saves nothing when the card is declined" do
+    allow(Stripe::Charge).to receive(:create)
+      .and_raise(Stripe::CardError.new("Your card was declined.", "number", code: "card_declined"))
+
+    pay
+
+    expect(response).to have_http_status(:bad_request)
+    expect(response.parsed_body["errors"]).to eq([{ "message" => "Your card was declined." }])
+    expect(Payment.count).to eq(0)
+  end
+
   it "charges the card, saves the payment and publishes payment:created" do
     pay
 
