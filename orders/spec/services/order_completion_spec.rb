@@ -1,8 +1,8 @@
 require "rails_helper"
 
 RSpec.describe OrderCompletion do
-  let(:ticket) { Ticket.create!(title: "concert", price: 20) }
-  let(:order) { Order.create!(user_id: SecureRandom.uuid, ticket:, expires_at: 15.minutes.from_now) }
+  let(:ticket) { Ticket.create!(id: next_id, title: "concert", price: 20) }
+  let(:order) { Order.create!(user_id: next_id, ticket:, expires_at: 15.minutes.from_now) }
 
   it "marks the order complete" do
     described_class.new(order:).call

@@ -1,8 +1,8 @@
 require "rails_helper"
 
 RSpec.describe OrderCreation do
-  let(:user_id) { SecureRandom.uuid }
-  let(:ticket) { Ticket.create!(title: "concert", price: 20) }
+  let(:user_id) { next_id }
+  let(:ticket) { Ticket.create!(id: next_id, title: "concert", price: 20) }
 
   def call(ticket_id: ticket.id) = described_class.new(ticket_id:, user_id:)
 
@@ -19,7 +19,7 @@ RSpec.describe OrderCreation do
   end
 
   it "fails with an error when the ticket is already reserved" do
-    Order.create!(user_id: SecureRandom.uuid, ticket:, expires_at: 15.minutes.from_now)
+    Order.create!(user_id: next_id, ticket:, expires_at: 15.minutes.from_now)
     service = call
 
     expect(service.call).to be(false)
@@ -29,6 +29,6 @@ RSpec.describe OrderCreation do
   end
 
   it "raises RecordNotFound for an unknown ticket" do
-    expect { call(ticket_id: SecureRandom.uuid).call }.to raise_error(ActiveRecord::RecordNotFound)
+    expect { call(ticket_id: next_id).call }.to raise_error(ActiveRecord::RecordNotFound)
   end
 end
