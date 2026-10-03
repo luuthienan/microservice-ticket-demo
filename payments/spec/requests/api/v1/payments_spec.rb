@@ -7,11 +7,11 @@ RSpec.describe "Payments", type: :request do
   before { allow(Stripe::Charge).to receive(:create).and_return(double(id: "ch_123")) }
 
   def pay(order_id: order.id, user: user_id)
-    post "/api/v1/payments", params: { orderId: order_id, token: "tok_visa" }, headers: sign_in_as(user), as: :json
+    post "/api/v1/payments", params: { order_id: order_id, token: "tok_visa" }, headers: sign_in_as(user), as: :json
   end
 
   it "requires sign in" do
-    post "/api/v1/payments", params: { orderId: order.id, token: "tok_visa" }, as: :json
+    post "/api/v1/payments", params: { order_id: order.id, token: "tok_visa" }, as: :json
 
     expect(response).to have_http_status(:unauthorized)
   end
@@ -34,11 +34,11 @@ RSpec.describe "Payments", type: :request do
     expect(response).to have_http_status(:unauthorized)
   end
 
-  it "rejects a missing orderId or token" do
+  it "rejects a missing order_id or token" do
     post "/api/v1/payments", params: {}, headers: sign_in_as(user_id), as: :json
 
     expect(response).to have_http_status(:bad_request)
-    expect(response.parsed_body["errors"].map { |e| e["field"] }).to eq(%w[orderId token])
+    expect(response.parsed_body["errors"].map { |e| e["field"] }).to eq(%w[order_id token])
     expect(Stripe::Charge).not_to have_received(:create)
   end
 
