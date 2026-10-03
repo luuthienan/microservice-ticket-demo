@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe OrderCopyCancellation do
-  let!(:order) { Order.create!(user_id: SecureRandom.uuid, price: 20, status: :created, version: 0) }
+  let!(:order) { Order.create!(id: next_id, user_id: next_id, price: 20, status: :created, version: 0) }
 
   it "cancels the copy at the next version" do
     described_class.new(id: order.id, version: 1).call

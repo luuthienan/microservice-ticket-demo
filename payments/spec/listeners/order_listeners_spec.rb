@@ -1,10 +1,10 @@
 require "rails_helper"
 
 RSpec.describe "order listeners" do
-  let(:order_id) { SecureRandom.uuid }
+  let(:order_id) { next_id }
   let(:created_event) do
-    { "id" => order_id, "version" => 0, "status" => "created", "user_id" => SecureRandom.uuid,
-      "ticket" => { "id" => SecureRandom.uuid, "price" => 20 } }
+    { "id" => order_id, "version" => 0, "status" => "created", "user_id" => next_id,
+      "ticket" => { "id" => next_id, "price" => 20 } }
   end
 
   describe OrderCreatedListener do

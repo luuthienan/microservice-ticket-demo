@@ -1,8 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "Payments", type: :request do
-  let(:user_id) { SecureRandom.uuid }
-  let(:order) { Order.create!(user_id:, price: 20.5, status: :created) }
+  let(:user_id) { next_id }
+  let(:order) { Order.create!(id: next_id, user_id:, price: 20.5, status: :created) }
 
   before { allow(Stripe::Charge).to receive(:create).and_return(double(id: "ch_123")) }
 
@@ -16,14 +16,20 @@ RSpec.describe "Payments", type: :request do
     expect(response).to have_http_status(:unauthorized)
   end
 
+  it "rejects a token whose id claim is not an integer" do
+    pay(user: SecureRandom.uuid)
+
+    expect(response).to have_http_status(:unauthorized)
+  end
+
   it "returns 404 for an unknown order" do
-    pay(order_id: SecureRandom.uuid)
+    pay(order_id: next_id)
 
     expect(response).to have_http_status(:not_found)
   end
 
   it "rejects another user's order" do
-    pay(user: SecureRandom.uuid)
+    pay(user: next_id)
 
     expect(response).to have_http_status(:unauthorized)
   end
