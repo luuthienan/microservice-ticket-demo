@@ -1,13 +1,23 @@
 class Api::V1::UsersController < ApplicationController
   def signup
-    user = User.create!(params.permit(:email, :password))
+    validator = SignupValidator.new(params.permit(:email, :password))
+    return render_validation_errors(validator) unless validator.valid?
+
+    service = UserRegistration.new(email: validator.email, password: validator.password)
+    user = service.call
+    return render_validation_errors(service) unless user
+
     sign_in user
     render json: user, status: :created
   end
 
   def signin
-    user = User.find_by(email: params[:email])
-    raise ApiError, "Invalid credentials" unless user&.authenticate(params[:password])
+    validator = SigninValidator.new(params.permit(:email, :password))
+    return render_validation_errors(validator) unless validator.valid?
+
+    service = UserAuthentication.new(email: validator.email, password: validator.password)
+    user = service.call
+    return render_validation_errors(service) unless user
 
     sign_in user
     render json: user
@@ -25,8 +35,7 @@ class Api::V1::UsersController < ApplicationController
   private
 
   def sign_in(user)
-    expires = 1.day.from_now
-    token = JWT.encode({ id: user.id, email: user.email, exp: expires.to_i }, ENV.fetch("JWT_KEY"), "HS256")
-    response.set_cookie("jwt", value: token, httponly: true, path: "/", expires:)
+    issuance = AuthTokenIssuance.new(user:)
+    response.set_cookie("jwt", value: issuance.call, httponly: true, path: "/", expires: issuance.expires_at)
   end
 end
