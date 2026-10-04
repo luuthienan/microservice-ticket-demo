@@ -2,7 +2,7 @@ class Api::V1::OrdersController < ApplicationController
   before_action :require_auth
 
   def index
-    render json: Order.where(user_id: current_user["id"]).includes(:ticket)
+    render json: Order.where(user_id: current_user["id"]).includes(:ticket).order(created_at: :desc, id: :desc)
   end
 
   def show

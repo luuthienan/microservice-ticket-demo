@@ -55,6 +55,22 @@ RSpec.describe "Orders", type: :request do
   end
 
   describe "GET /api/v1/orders" do
+    it "requires sign in" do
+      get "/api/v1/orders"
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it "lists the newest order first" do
+      older = create_order
+      older.update_columns(created_at: 1.hour.ago)
+      newer = create_order(ticket: Ticket.create!(id: next_id, title: "game", price: 10))
+
+      get "/api/v1/orders", headers: sign_in_as(user_id)
+
+      expect(response.parsed_body.map { |o| o["id"] }).to eq([newer.id, older.id])
+    end
+
     it "lists only the signed-in user's orders" do
       mine = create_order
       create_order(user_id: next_id, ticket: Ticket.create!(id: next_id, title: "game", price: 10))
