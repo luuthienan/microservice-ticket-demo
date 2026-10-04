@@ -1,7 +1,7 @@
 class OrderCreation
   include ActiveModel::Model
 
-  EXPIRATION_WINDOW = 15.minutes
+  DEFAULT_EXPIRATION_WINDOW_SECONDS = 60
 
   attr_accessor :ticket_id, :user_id
 
@@ -14,7 +14,7 @@ class OrderCreation
     end
 
     order = ApplicationRecord.transaction do
-      order = Order.create!(user_id:, ticket:, expires_at: EXPIRATION_WINDOW.from_now)
+      order = Order.create!(user_id:, ticket:, expires_at: expiration_window.from_now)
       EventPublisher.new.publish("order:created", event_data(order))
       order
     end
@@ -23,6 +23,15 @@ class OrderCreation
   end
 
   private
+
+  # How long an unpaid order lasts, from EXPIRATION_WINDOW_SECONDS (default 60).
+  def expiration_window
+    raw = ENV.fetch("EXPIRATION_WINDOW_SECONDS", DEFAULT_EXPIRATION_WINDOW_SECONDS)
+    seconds = Integer(raw, exception: false)
+    raise ArgumentError, "EXPIRATION_WINDOW_SECONDS must be a positive integer, got #{raw.inspect}" unless seconds&.positive?
+
+    seconds.seconds
+  end
 
   def event_data(order)
     { id: order.id, version: order.lock_version, status: order.status, user_id: order.user_id,
