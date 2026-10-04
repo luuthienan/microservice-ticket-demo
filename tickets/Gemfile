@@ -5,7 +5,7 @@ gem "puma"
 gem "jwt"
 gem "pg"
 gem "active_model_serializers", "~> 0.10.16"
-gem "redis"
+gem "rdkafka"
 
 group :development, :test do
   gem "rspec-rails"

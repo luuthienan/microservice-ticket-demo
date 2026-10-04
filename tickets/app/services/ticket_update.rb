@@ -14,8 +14,10 @@ class TicketUpdate
       return false
     end
 
-    ticket.update!(attributes)
-    EventPublisher.new.publish("ticket:updated", event_data(ticket)) if ticket.saved_changes?
+    ApplicationRecord.transaction do
+      ticket.update!(attributes)
+      EventPublisher.new.publish("ticket:updated", event_data(ticket)) if ticket.saved_changes?
+    end
     ticket
   end
 

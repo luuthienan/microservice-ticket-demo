@@ -1,58 +1,106 @@
-# Consumes events from Redis Streams: one stream per subject, one consumer group per service.
-# Each listener class responds to `.subject` and `#handle(data)`. An event is acked only when
-# its handler succeeds; otherwise it is redelivered once it has been pending for ACK_WAIT_MS.
+# Consumes events from Kafka: one consumer group per service, one topic per owning service.
+# Each listener class responds to `.subject` and `#handle(data)`. An event's offset is committed only
+# when its handler succeeds. A failing event is retried in place, pausing only its partition so the
+# others keep flowing; after MAX_ATTEMPTS it goes to the topic's dead-letter topic and is skipped.
 class EventConsumer
-  ACK_WAIT_MS = 5_000
+  MAX_ATTEMPTS = 5
+  POLL_TIMEOUT_MS = 1_000
 
-  def self.redis
-    @redis ||= Redis.new(url: ENV.fetch("REDIS_URL"))
-  end
+  attr_reader :group
 
-  def initialize(group, listeners)
+  def initialize(group, listeners, consumer: nil, producer: nil)
     @group = group
     @handlers = listeners.index_by(&:subject)
-    @consumer = "#{group}-#{Process.pid}"
+    @consumer = consumer
+    @producer = producer
+    @attempts = Hash.new(0)
+    @resume_at = {}
+  end
+
+  def topics
+    @handlers.keys.map { |subject| EventBus.topic_for(subject) }.uniq
   end
 
   # Runs forever.
   def listen
-    create_groups
+    consumer.subscribe(*topics)
     loop { poll }
   end
 
-  # One pass: redeliver stale entries, then read fresh ones.
+  # One pass: resume partitions whose backoff is over, then handle at most one message.
   def poll
-    @handlers.each do |subject, listener|
-      stale = redis.xautoclaim(subject, @group, @consumer, ACK_WAIT_MS, "0-0", count: 10)
-      deliver(listener, subject, stale["entries"])
-    end
-
-    fresh = redis.xreadgroup(@group, @consumer, @handlers.keys, @handlers.keys.map { ">" }, count: 10, block: 1000)
-    fresh.each { |subject, entries| deliver(@handlers[subject], subject, entries) }
+    resume_due_partitions
+    message = consumer.poll(POLL_TIMEOUT_MS)
+    process(message) if message
   end
 
   private
 
-  def redis
-    self.class.redis
+  def consumer
+    @consumer ||= EventBus.consumer(@group)
   end
 
-  def create_groups
-    @handlers.each_key { |subject| create_group(subject) }
+  def producer
+    @producer ||= EventBus.producer
   end
 
-  def create_group(subject)
-    redis.xgroup(:create, subject, @group, "0", mkstream: true)
-  rescue Redis::CommandError => e
-    raise unless e.message.start_with?("BUSYGROUP")
+  def process(message)
+    listener = @handlers[message.headers&.fetch("subject", nil)]
+    listener&.new&.handle(JSON.parse(message.payload))
+    succeeded(message)
+  rescue => e
+    failed(message, e)
   end
 
-  def deliver(listener, subject, entries)
-    entries.each do |id, fields|
-      listener.new.handle(JSON.parse(fields["data"]))
-      redis.xack(subject, @group, id)
-    rescue => e
-      warn "#{subject} #{id} failed, will retry: #{e.class}: #{e.message}"
+  def succeeded(message)
+    @attempts.delete(position(message))
+    consumer.store_offset(message)
+    consumer.commit(nil, false)
+  end
+
+  def failed(message, error)
+    attempts = @attempts[position(message)] += 1
+    if attempts >= MAX_ATTEMPTS
+      dead_letter(message, error, attempts)
+      succeeded(message)
+    else
+      retry_later(message, error, attempts)
     end
+  end
+
+  # Rewinds to the failed message and pauses its partition for 1, 2, 4, 8 seconds.
+  def retry_later(message, error, attempts)
+    delay = 2**(attempts - 1)
+    warn "#{message.topic}[#{message.partition}]@#{message.offset} failed (attempt #{attempts}), retrying in #{delay}s: " \
+         "#{error.class}: #{error.message}"
+    consumer.seek(message)
+    consumer.pause(partition_list(message.topic, message.partition))
+    @resume_at[[message.topic, message.partition]] = Time.current + delay
+  end
+
+  def resume_due_partitions
+    @resume_at.select { |_, time| time <= Time.current }.each_key do |topic, partition|
+      @resume_at.delete([topic, partition])
+      consumer.resume(partition_list(topic, partition))
+    rescue Rdkafka::RdkafkaError
+      nil # the partition was reassigned in the meantime
+    end
+  end
+
+  def dead_letter(message, error, attempts)
+    warn "#{message.topic}[#{message.partition}]@#{message.offset} dead-lettered: #{error.class}: #{error.message}"
+    producer.produce(
+      topic: EventBus.dead_letter_topic_for(message.topic), key: message.key, payload: message.payload,
+      headers: (message.headers || {}).merge(
+        "error" => "#{error.class}: #{error.message}", "attempts" => attempts.to_s, "original_topic" => message.topic,
+        "original_partition" => message.partition.to_s, "original_offset" => message.offset.to_s
+      )
+    ).wait
+  end
+
+  def position(message) = [message.topic, message.partition, message.offset]
+
+  def partition_list(topic, partition)
+    Rdkafka::Consumer::TopicPartitionList.new.tap { |list| list.add_topic_and_partitions_with_offsets(topic, { partition => nil }) }
   end
 end

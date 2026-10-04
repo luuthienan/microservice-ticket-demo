@@ -13,8 +13,10 @@ class OrderCancellation
       return false
     end
 
-    order.update!(status: :cancelled)
-    EventPublisher.new.publish("order:cancelled", { id: order.id, version: order.lock_version, ticket: { id: order.ticket_id } })
+    ApplicationRecord.transaction do
+      order.update!(status: :cancelled)
+      EventPublisher.new.publish("order:cancelled", { id: order.id, version: order.lock_version, ticket: { id: order.ticket_id } })
+    end
     order
   end
 end

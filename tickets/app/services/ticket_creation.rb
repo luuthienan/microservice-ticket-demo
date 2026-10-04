@@ -4,9 +4,11 @@ class TicketCreation
   attr_accessor :title, :price, :user_id
 
   def call
-    ticket = Ticket.create!(title:, price:, user_id:)
-    EventPublisher.new.publish("ticket:created", event_data(ticket))
-    ticket
+    ApplicationRecord.transaction do
+      ticket = Ticket.create!(title:, price:, user_id:)
+      EventPublisher.new.publish("ticket:created", event_data(ticket))
+      ticket
+    end
   end
 
   private

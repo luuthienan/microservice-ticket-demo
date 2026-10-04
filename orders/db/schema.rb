@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_03_144834) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_04_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -23,6 +23,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_03_144834) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["ticket_id"], name: "index_orders_on_ticket_id"
+  end
+
+  create_table "outbox_events", force: :cascade do |t|
+    t.string "subject", null: false
+    t.bigint "entity_id", null: false
+    t.jsonb "payload", null: false
+    t.datetime "occurred_at", null: false
+    t.datetime "published_at"
+    t.datetime "created_at", null: false
+    t.index ["id"], name: "index_outbox_events_unpublished", where: "(published_at IS NULL)"
+    t.index ["published_at"], name: "index_outbox_events_on_published_at", where: "(published_at IS NOT NULL)"
   end
 
   create_table "tickets", id: :bigint, default: nil, force: :cascade do |t|

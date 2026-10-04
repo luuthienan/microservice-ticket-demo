@@ -17,7 +17,7 @@ def sign_in_as(user_id = next_id)
   { "Cookie" => "jwt=#{token}" }
 end
 
-# Stands in for every EventPublisher, so specs never reach Redis. Assert on `event_publisher`.
+# Stands in for every EventPublisher, so specs never write to the outbox. Assert on `event_publisher`.
 RSpec.shared_context "event publisher" do
   let(:event_publisher) { instance_spy(EventPublisher) }
 

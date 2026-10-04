@@ -1,4 +1,5 @@
-# Locks the ticket by recording which order holds it.
+# Locks the ticket by recording which order holds it. A ticket held by another order stays with it,
+# so a replayed order:created can't take it over.
 class TicketReservation
   include ActiveModel::Model
 
@@ -6,8 +7,12 @@ class TicketReservation
 
   def call
     ticket = Ticket.find(ticket_id)
-    ticket.update!(order_id:)
-    EventPublisher.new.publish("ticket:updated", event_data(ticket)) if ticket.saved_changes?
+    return ticket if ticket.reserved? && ticket.order_id != order_id
+
+    ApplicationRecord.transaction do
+      ticket.update!(order_id:)
+      EventPublisher.new.publish("ticket:updated", event_data(ticket)) if ticket.saved_changes?
+    end
     ticket
   end
 
