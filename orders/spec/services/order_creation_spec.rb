@@ -18,6 +18,13 @@ RSpec.describe OrderCreation do
     )
   end
 
+  it "schedules the order to expire when its time is up" do
+    order = call.call
+
+    expect(ExpireOrderJob.jobs.size).to eq(1)
+    expect(ExpireOrderJob.jobs.first).to include("args" => [order.id], "at" => be_within(1).of(order.expires_at.to_f))
+  end
+
   it "fails with an error when the ticket is already reserved" do
     Order.create!(user_id: next_id, ticket:, expires_at: 15.minutes.from_now)
     service = call
@@ -26,6 +33,7 @@ RSpec.describe OrderCreation do
     expect(service.errors.full_messages).to eq(["Ticket is already reserved"])
     expect(Order.count).to eq(1)
     expect(event_publisher).not_to have_received(:publish)
+    expect(ExpireOrderJob.jobs).to be_empty
   end
 
   it "raises RecordNotFound for an unknown ticket" do

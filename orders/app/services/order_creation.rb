@@ -13,8 +13,12 @@ class OrderCreation
       return false
     end
 
-    order = Order.create!(user_id:, ticket:, expires_at: EXPIRATION_WINDOW.from_now)
-    EventPublisher.new.publish("order:created", event_data(order))
+    order = ApplicationRecord.transaction do
+      order = Order.create!(user_id:, ticket:, expires_at: EXPIRATION_WINDOW.from_now)
+      EventPublisher.new.publish("order:created", event_data(order))
+      order
+    end
+    ExpireOrderJob.perform_at(order.expires_at, order.id)
     order
   end
 
