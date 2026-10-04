@@ -113,6 +113,7 @@ services:
     <<: *rails
     build: ./tickets
     command: bin/rails events:listen
+    restart: unless-stopped
     depends_on:
       tickets: { condition: service_healthy }
       kafka-init: { condition: service_completed_successfully }
@@ -121,6 +122,7 @@ services:
     <<: *rails
     build: ./tickets
     command: bin/rails events:relay
+    restart: unless-stopped
     depends_on:
       tickets: { condition: service_healthy }
       kafka-init: { condition: service_completed_successfully }
@@ -135,6 +137,7 @@ services:
     <<: *rails
     build: ./orders
     command: bin/rails events:listen
+    restart: unless-stopped
     depends_on:
       orders: { condition: service_healthy }
       kafka-init: { condition: service_completed_successfully }
@@ -143,6 +146,7 @@ services:
     <<: *rails
     build: ./orders
     command: bin/rails events:relay
+    restart: unless-stopped
     depends_on:
       orders: { condition: service_healthy }
       kafka-init: { condition: service_completed_successfully }
@@ -166,6 +170,7 @@ services:
     <<: *rails
     build: ./payments
     command: bin/rails events:listen
+    restart: unless-stopped
     depends_on:
       payments: { condition: service_healthy }
       kafka-init: { condition: service_completed_successfully }
@@ -174,6 +179,7 @@ services:
     <<: *rails
     build: ./payments
     command: bin/rails events:relay
+    restart: unless-stopped
     depends_on:
       payments: { condition: service_healthy }
       kafka-init: { condition: service_completed_successfully }
