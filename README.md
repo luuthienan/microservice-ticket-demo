@@ -7,7 +7,7 @@ It is a rewrite of the Node.js `ticketing` demo; the Next.js client is unchanged
 | ------------ | -------------------------------------------------------------- | ----------------- |
 | `auth`       | Sign up, sign in, sign out, current user (JWT in a cookie)     | `auth_*`          |
 | `tickets`    | Create, edit and list tickets; locks a ticket while it is ordered | `tickets_*`    |
-| `orders`     | Create and cancel orders; orders expire after 15 minutes (Sidekiq) | `orders_*`    |
+| `orders`     | Create and cancel orders; orders expire after 1 minute by default (Sidekiq) | `orders_*`    |
 | `payments`   | Charge an order with Stripe                                    | `payments_*`      |
 | `client`     | Next.js frontend                                               |                   |
 
@@ -40,7 +40,7 @@ An update is applied only when it is exactly one version ahead. One the copy alr
 event twice is harmless. A gap raises and goes through the retry and dead-letter path.
 
 Order expiry is not an event: `orders` schedules a Sidekiq job when it creates an order (Redis holds the jobs) and
-the job cancels the order if it is still unpaid.
+the job cancels the order if it is still unpaid. The window is `EXPIRATION_WINDOW_SECONDS` (default 60).
 
 ### Replay
 
