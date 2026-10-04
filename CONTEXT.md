@@ -9,7 +9,7 @@ A service's local stand-in for a record owned by another service, kept current t
 _Avoid_: Replica, snapshot, mirror
 
 **Version**:
-A counter on a record that a Copy follows. A Copy accepts an update only when it is exactly one Version ahead of itself.
+A counter on a record that a Copy follows. A Copy applies an update only when it is exactly one Version ahead of itself. An update that is not ahead is already applied and is ignored; one that is more than one ahead means an update is missing and is not applied.
 _Avoid_: Revision, sequence number
 
 **Reservation**:
@@ -17,7 +17,7 @@ A ticket being held by an order, so nobody else can order it. It lasts until tha
 _Avoid_: Lock, hold
 
 **Event**:
-A fact a service announces for other services to act on, such as a record being created or an order expiring. Copies follow the Events about their source record.
+A fact a service announces for other services to act on, such as a record being created or an order being cancelled. Copies follow the Events about their source record.
 _Avoid_: Message, notification
 
 **Subject**:
