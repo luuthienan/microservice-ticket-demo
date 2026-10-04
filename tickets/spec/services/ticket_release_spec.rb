@@ -7,6 +7,6 @@ RSpec.describe TicketRelease do
     described_class.new(ticket_id: ticket.id).call
 
     expect(ticket.reload.order_id).to be_nil
-    expect(Events).to have_received(:publish).with("ticket:updated", hash_including(order_id: nil))
+    expect(event_publisher).to have_received(:publish).with("ticket:updated", hash_including(order_id: nil))
   end
 end

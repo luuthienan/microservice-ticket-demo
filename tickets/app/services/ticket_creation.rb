@@ -5,7 +5,7 @@ class TicketCreation
 
   def call
     ticket = Ticket.create!(title:, price:, user_id:)
-    Events.publish("ticket:created", event_data(ticket))
+    EventPublisher.new.publish("ticket:created", event_data(ticket))
     ticket
   end
 

@@ -7,7 +7,7 @@ RSpec.describe TicketCreation do
     ticket = described_class.new(title: "concert", price: 10, user_id:).call
 
     expect(ticket).to have_attributes(title: "concert", price: 10, user_id:)
-    expect(Events).to have_received(:publish).with(
+    expect(event_publisher).to have_received(:publish).with(
       "ticket:created",
       { id: ticket.id, title: "concert", price: 10, user_id:, order_id: nil, version: 0 }
     )

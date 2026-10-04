@@ -24,7 +24,7 @@ class PaymentCreation
       description: "Order #{order.id}"
     )
     payment = Payment.create!(order:, stripe_id: charge.id)
-    Events.publish("payment:created", { id: payment.id, order_id: order.id, stripe_id: payment.stripe_id })
+    EventPublisher.new.publish("payment:created", { id: payment.id, order_id: order.id, stripe_id: payment.stripe_id })
     payment
   end
 end

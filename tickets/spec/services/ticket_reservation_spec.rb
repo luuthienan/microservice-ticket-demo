@@ -9,7 +9,7 @@ RSpec.describe TicketReservation do
     described_class.new(ticket_id: ticket.id, order_id:).call
 
     expect(ticket.reload.order_id).to eq(order_id)
-    expect(Events).to have_received(:publish).with("ticket:updated", hash_including(order_id:, version: 1))
+    expect(event_publisher).to have_received(:publish).with("ticket:updated", hash_including(order_id:, version: 1))
   end
 
   it "does not publish again when the order is already recorded" do
@@ -18,6 +18,6 @@ RSpec.describe TicketReservation do
 
     described_class.new(ticket_id: ticket.id, order_id:).call
 
-    expect(Events).not_to have_received(:publish)
+    expect(event_publisher).not_to have_received(:publish)
   end
 end

@@ -14,7 +14,7 @@ class OrderCancellation
     end
 
     order.update!(status: :cancelled)
-    Events.publish("order:cancelled", { id: order.id, version: order.lock_version, ticket: { id: order.ticket_id } })
+    EventPublisher.new.publish("order:cancelled", { id: order.id, version: order.lock_version, ticket: { id: order.ticket_id } })
     order
   end
 end

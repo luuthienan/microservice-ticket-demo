@@ -6,10 +6,6 @@ module Events
     @redis ||= Redis.new(url: ENV.fetch("REDIS_URL"))
   end
 
-  def self.publish(subject, data)
-    redis.xadd(subject, { data: data.to_json })
-  end
-
   # Runs forever. Each listener class responds to `.subject` and `#handle(data)`.
   # An event is acked only when its handler succeeds; otherwise it is redelivered
   # once it has been pending for ACK_WAIT_MS.
