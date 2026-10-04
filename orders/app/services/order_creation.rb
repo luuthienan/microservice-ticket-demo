@@ -5,13 +5,13 @@ class OrderCreation
 
   attr_accessor :ticket_id, :user_id
 
+  ACTIVE_ORDER_INDEX = "index_orders_on_ticket_id_active"
+
   # Returns the new order, or false with errors when the ticket is already reserved.
+  # The check below is a fast path; the unique index on active orders is what decides a race.
   def call
     ticket = Ticket.find(ticket_id)
-    if ticket.reserved?
-      errors.add(:base, "Ticket is already reserved")
-      return false
-    end
+    return already_reserved if ticket.reserved?
 
     order = ApplicationRecord.transaction do
       order = Order.create!(user_id:, ticket:, expires_at: expiration_window.from_now)
@@ -20,9 +20,18 @@ class OrderCreation
     end
     ExpireOrderJob.perform_at(order.expires_at, order.id)
     order
+  rescue ActiveRecord::RecordNotUnique => e
+    raise unless e.message.include?(ACTIVE_ORDER_INDEX)
+
+    already_reserved
   end
 
   private
+
+  def already_reserved
+    errors.add(:base, "Ticket is already reserved")
+    false
+  end
 
   # How long an unpaid order lasts, from EXPIRATION_WINDOW_SECONDS (default 60).
   def expiration_window

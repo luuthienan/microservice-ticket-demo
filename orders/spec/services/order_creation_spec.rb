@@ -57,7 +57,53 @@ RSpec.describe OrderCreation do
     expect(ExpireOrderJob.jobs).to be_empty
   end
 
+  it "fails the same way when another order wins the race after the reserved check" do
+    Order.create!(user_id: next_id, ticket:, expires_at: 15.minutes.from_now)
+    allow_any_instance_of(Ticket).to receive(:reserved?).and_return(false)
+    service = call
+
+    expect(service.call).to be(false)
+    expect(service.errors.full_messages).to eq(["Ticket is already reserved"])
+    expect(Order.count).to eq(1)
+    expect(event_publisher).not_to have_received(:publish)
+    expect(ExpireOrderJob.jobs).to be_empty
+  end
+
+  it "lets a ticket be ordered again once its order is cancelled" do
+    Order.create!(user_id: next_id, ticket:, status: :cancelled, expires_at: 15.minutes.from_now)
+
+    expect(call.call).to be_a(Order)
+    expect(Order.where(ticket:).count).to eq(2)
+  end
+
   it "raises RecordNotFound for an unknown ticket" do
     expect { call(ticket_id: next_id).call }.to raise_error(ActiveRecord::RecordNotFound)
+  end
+
+  describe "when two users order the same ticket at the same time" do
+    self.use_transactional_tests = false
+
+    after do
+      Order.where(ticket_id: ticket.id).delete_all
+      ticket.destroy
+    end
+
+    it "creates exactly one order" do
+      allow_any_instance_of(Ticket).to receive(:reserved?).and_return(false) # both pass the check, as in a real race
+      ticket && user_id # memoize `let`s before the threads read them
+      start = Queue.new
+      results = 2.times.map do
+        Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection do
+            start.pop
+            call.call
+          end
+        end
+      end.tap { 2.times { start << :go } }.map(&:value)
+
+      expect(results.count(false)).to eq(1)
+      expect(results.grep(Order).size).to eq(1)
+      expect(Order.where(ticket_id: ticket.id).count).to eq(1)
+    end
   end
 end
