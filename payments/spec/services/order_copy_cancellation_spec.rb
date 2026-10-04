@@ -9,6 +9,14 @@ RSpec.describe OrderCopyCancellation do
     expect(order.reload).to have_attributes(status: "cancelled", version: 1)
   end
 
+  it "ignores a cancellation the copy already has, as when an event is replayed" do
+    described_class.new(id: order.id, version: 1).call
+    described_class.new(id: order.id, version: 1).call
+    described_class.new(id: order.id, version: 0).call
+
+    expect(order.reload).to have_attributes(status: "cancelled", version: 1)
+  end
+
   it "raises when a version was skipped so the event is redelivered" do
     expect { described_class.new(id: order.id, version: 2).call }.to raise_error(ActiveRecord::RecordNotFound)
   end
