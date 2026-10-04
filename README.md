@@ -7,28 +7,59 @@ It is a rewrite of the Node.js `ticketing` demo; the Next.js client is unchanged
 | ------------ | -------------------------------------------------------------- | ----------------- |
 | `auth`       | Sign up, sign in, sign out, current user (JWT in a cookie)     | `auth_*`          |
 | `tickets`    | Create, edit and list tickets; locks a ticket while it is ordered | `tickets_*`    |
-| `orders`     | Create and cancel orders; orders expire after 15 minutes       | `orders_*`        |
+| `orders`     | Create and cancel orders; orders expire after 15 minutes (Sidekiq) | `orders_*`    |
 | `payments`   | Charge an order with Stripe                                    | `payments_*`      |
-| `expiration` | Fires `expiration:complete` when an order's time is up (Sidekiq) | none            |
 | `client`     | Next.js frontend                                               |                   |
 
 `nginx` routes `/api/v1/users`, `/api/v1/tickets`, `/api/v1/orders` and `/api/v1/payments` to the services and everything else to the client.
 
 ## Events
 
-Services talk through Redis Streams: one stream per event, one consumer group per service.
-An event is acknowledged only after its handler succeeds, and is redelivered otherwise.
+Services talk through Kafka: one topic per service that owns the data (`tickets.events`, `orders.events`,
+`payments.events`), one consumer group per service. The Subject (`ticket:updated`) travels in a message
+header and the message is keyed by the entity's id, so all events for one record stay in order.
+See `docs/adr/0002-kafka-topic-per-owning-service.md`.
 
 ```
 ticket:created, ticket:updated  tickets  -> orders
-order:created                   orders   -> tickets, payments, expiration
+order:created                   orders   -> tickets, payments
 order:cancelled                 orders   -> tickets, payments
-expiration:complete             expiration -> orders
 payment:created                 payments -> orders
 ```
 
+**Publishing.** A service writes each event to its `outbox_events` table in the same transaction as the change it
+announces. `<service>-relay` (`bin/rails events:relay`) sends rows to Kafka in id order and marks them published;
+published rows are purged after 7 days. Delivery is at-least-once (`docs/adr/0003-transactional-outbox-with-polling-relay.md`).
+
+**Consuming.** An offset is committed only after the handler succeeds. A failing event is retried in place with
+backoff (1, 2, 4, 8 s) while the other partitions keep flowing; after 5 attempts it goes to `<topic>.dlt` with the
+error and its original topic, partition and offset in headers, and the consumer moves on.
+
 Copies of another service's data (the ticket copy in `orders`, the order copy in `payments`) carry a `version`.
-An update is applied only when it is exactly one version ahead; otherwise it is retried.
+An update is applied only when it is exactly one version ahead. One the copy already has is ignored, so handling an
+event twice is harmless. A gap raises and goes through the retry and dead-letter path.
+
+Order expiry is not an event: `orders` schedules a Sidekiq job when it creates an order (Redis holds the jobs) and
+the job cancels the order if it is still unpaid.
+
+### Replay
+
+Replaying moves a consumer group's committed offsets back so its listeners read the events again. Stop the
+listener first, then reset and start it:
+
+```sh
+docker compose stop orders-listener
+docker compose run --rm orders bin/rails events:replay FROM=earliest      # or timestamp:2026-10-04T09:00:00Z, or offset:<partition>:<n>
+docker compose start orders-listener
+```
+
+To rebuild a service's copies from scratch, also empty the copy table first (`orders.tickets`, `payments.orders`).
+Topics keep events forever, so `FROM=earliest` always has the full history.
+
+### Monitoring
+
+Kafka UI at <http://localhost:8081>: topics, messages (key, headers), dead-letter topics and each consumer
+group's offsets and lag.
 
 ## Run
 
@@ -42,7 +73,7 @@ Open <http://localhost:8080>.
 ## Test
 
 ```sh
-docker compose run --rm tickets bundle exec rspec   # or auth, orders, payments, expiration
+docker compose run --rm tickets bundle exec rspec   # or auth, orders, payments
 ```
 
 The first run of each service creates its databases and `db/schema.rb`.
