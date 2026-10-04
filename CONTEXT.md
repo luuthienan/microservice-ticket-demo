@@ -12,6 +12,10 @@ _Avoid_: Replica, snapshot, mirror
 A counter on a record that a Copy follows. A Copy applies an update only when it is exactly one Version ahead of itself. An update that is not ahead is already applied and is ignored; one that is more than one ahead means an update is missing and is not applied.
 _Avoid_: Revision, sequence number
 
+**Order**:
+A user's request to buy a ticket. It is awaiting payment until it is paid or cancelled; an order left unpaid past its deadline is cancelled. Users see an order as "Awaiting payment", "Paid" or "Cancelled", and an expired order is simply "Cancelled".
+_Avoid_: Purchase, booking
+
 **Reservation**:
 A ticket being held by an order, so nobody else can order it. It lasts until that order is cancelled or expires.
 _Avoid_: Lock, hold
