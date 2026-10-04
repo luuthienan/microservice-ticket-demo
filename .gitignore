@@ -1,4 +1,5 @@
 .env
+.env.client
 log/
 tmp/
 node_modules/
