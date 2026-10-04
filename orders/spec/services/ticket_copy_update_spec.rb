@@ -9,6 +9,14 @@ RSpec.describe TicketCopyUpdate do
     expect(ticket.reload).to have_attributes(title: "game", price: 30, version: 1)
   end
 
+  it "ignores an update the copy already has, as when an event is replayed" do
+    described_class.new(id: ticket.id, title: "game", price: 30, version: 1).call
+    described_class.new(id: ticket.id, title: "old", price: 1, version: 1).call
+    described_class.new(id: ticket.id, title: "older", price: 1, version: 0).call
+
+    expect(ticket.reload).to have_attributes(title: "game", price: 30, version: 1)
+  end
+
   it "raises when a version was skipped so the event is redelivered" do
     expect { described_class.new(id: ticket.id, title: "game", price: 30, version: 2).call }
       .to raise_error(ActiveRecord::RecordNotFound)
