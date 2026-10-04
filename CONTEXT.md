@@ -23,3 +23,7 @@ _Avoid_: Message, notification
 **Subject**:
 The name an Event is published under, such as `ticket:updated`. A service listens for the Subjects it cares about.
 _Avoid_: Topic, channel, stream
+
+**Listener**:
+A service's handler for one Subject's Events.
+_Avoid_: Subscriber, handler
