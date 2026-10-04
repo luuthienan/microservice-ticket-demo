@@ -1,10 +1,24 @@
 x-rails: &rails
   env_file: .env
   environment:
+    KAFKA_BROKERS: kafka:9092
+  depends_on:
+    postgres: { condition: service_healthy }
+    kafka-init: { condition: service_completed_successfully }
+
+# Orders also schedules order expiry with Sidekiq, which keeps its jobs in Redis.
+x-rails-redis: &rails-redis
+  <<: *rails
+  environment:
+    KAFKA_BROKERS: kafka:9092
     REDIS_URL: redis://redis:6379
   depends_on:
     postgres: { condition: service_healthy }
+    kafka-init: { condition: service_completed_successfully }
     redis: { condition: service_healthy }
+
+x-kafka-image: &kafka-image
+  image: apache/kafka:4.0.0
 
 x-web-healthcheck: &web-healthcheck
   test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/3000'"]
@@ -24,6 +38,54 @@ services:
       test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 3s
       retries: 5
+
+  kafka:
+    <<: *kafka-image
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    volumes:
+      - ./volumes/kafkadata:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null"]
+      interval: 5s
+      retries: 20
+
+  # Topics are created here, never on first use: one per owning service plus a dead-letter topic each.
+  # Events are kept forever so a service can replay them from the start.
+  kafka-init:
+    <<: *kafka-image
+    depends_on:
+      kafka: { condition: service_healthy }
+    restart: "no"
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        for topic in tickets.events orders.events payments.events tickets.events.dlt orders.events.dlt payments.events.dlt; do
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists \
+            --topic $$topic --partitions 3 --replication-factor 1 --config retention.ms=-1
+        done
+
+  kafka-ui:
+    image: kafbat/kafka-ui:latest
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    ports:
+      - "8081:8080"
+    depends_on:
+      kafka: { condition: service_healthy }
 
   redis:
     image: redis:7-alpine
@@ -53,10 +115,18 @@ services:
     command: bin/rails events:listen
     depends_on:
       tickets: { condition: service_healthy }
-      redis: { condition: service_healthy }
+      kafka-init: { condition: service_completed_successfully }
+
+  tickets-relay:
+    <<: *rails
+    build: ./tickets
+    command: bin/rails events:relay
+    depends_on:
+      tickets: { condition: service_healthy }
+      kafka-init: { condition: service_completed_successfully }
 
   orders:
-    <<: *rails
+    <<: *rails-redis
     build: ./orders
     command: sh -c "bin/rails db:prepare && bin/rails server -b 0.0.0.0"
     healthcheck: *web-healthcheck
@@ -67,6 +137,23 @@ services:
     command: bin/rails events:listen
     depends_on:
       orders: { condition: service_healthy }
+      kafka-init: { condition: service_completed_successfully }
+
+  orders-relay:
+    <<: *rails
+    build: ./orders
+    command: bin/rails events:relay
+    depends_on:
+      orders: { condition: service_healthy }
+      kafka-init: { condition: service_completed_successfully }
+
+  orders-worker:
+    <<: *rails-redis
+    build: ./orders
+    command: bundle exec sidekiq
+    depends_on:
+      orders: { condition: service_healthy }
+      kafka-init: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
 
   payments:
@@ -81,17 +168,15 @@ services:
     command: bin/rails events:listen
     depends_on:
       payments: { condition: service_healthy }
-      redis: { condition: service_healthy }
+      kafka-init: { condition: service_completed_successfully }
 
-  expiration:
+  payments-relay:
     <<: *rails
-    build: ./expiration
-    command: bin/rails events:listen
-
-  expiration-worker:
-    <<: *rails
-    build: ./expiration
-    command: bundle exec sidekiq
+    build: ./payments
+    command: bin/rails events:relay
+    depends_on:
+      payments: { condition: service_healthy }
+      kafka-init: { condition: service_completed_successfully }
 
   client:
     build: ./client
