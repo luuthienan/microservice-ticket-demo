@@ -1,5 +1,21 @@
+COMPOSE = docker compose -p microservice-ticket-demo -f docker-compose.yml
+
+.PHONY: up down shell-auth shell-orders shell-tickets shell-payments
+
 up:
-	docker compose -p microservice-ticket-demo -f docker-compose.yml up -d --build
+	$(COMPOSE) up -d --build
 
 down:
-	docker compose -p microservice-ticket-demo -f docker-compose.yml down --remove-orphans
+	$(COMPOSE) down --remove-orphans
+
+shell-auth:
+	$(COMPOSE) exec auth bash
+
+shell-orders:
+	$(COMPOSE) exec orders bash
+
+shell-tickets:
+	$(COMPOSE) exec tickets bash
+
+shell-payments:
+	$(COMPOSE) exec payments bash
