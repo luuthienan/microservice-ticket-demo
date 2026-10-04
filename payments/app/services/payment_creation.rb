@@ -23,8 +23,10 @@ class PaymentCreation
       source: token,
       description: "Order #{order.id}"
     )
-    payment = Payment.create!(order:, stripe_id: charge.id)
-    EventPublisher.new.publish("payment:created", { id: payment.id, order_id: order.id, stripe_id: payment.stripe_id })
-    payment
+    ApplicationRecord.transaction do
+      payment = Payment.create!(order:, stripe_id: charge.id)
+      EventPublisher.new.publish("payment:created", { id: payment.id, order_id: order.id, stripe_id: payment.stripe_id })
+      payment
+    end
   end
 end

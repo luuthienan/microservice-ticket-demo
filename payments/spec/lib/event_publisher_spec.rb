@@ -1,16 +1,30 @@
 require "rails_helper"
 
 RSpec.describe EventPublisher do
-  let(:redis) { instance_spy(Redis) }
+  before { allow(EventPublisher).to receive(:new).and_call_original }
 
-  before do
-    allow(EventPublisher).to receive(:new).and_call_original
-    allow(EventPublisher).to receive(:redis).and_return(redis)
+  it "records the event in the outbox, keyed by the entity's id" do
+    described_class.new.publish("ticket:updated", { id: 7, order_id: 9, title: "concert" })
+
+    expect(OutboxEvent.last).to have_attributes(
+      subject: "ticket:updated", entity_id: 7, payload: { "id" => 7, "order_id" => 9, "title" => "concert" }, published_at: nil
+    )
   end
 
-  it "adds the data as JSON to the stream named by the subject" do
-    described_class.new.publish("ticket:created", { id: 1, title: "concert" })
+  it "keys a payment by its order" do
+    described_class.new.publish("payment:created", { id: 3, order_id: 5, stripe_id: "ch_1" })
 
-    expect(redis).to have_received(:xadd).with("ticket:created", { data: '{"id":1,"title":"concert"}' })
+    expect(OutboxEvent.last.entity_id).to eq(5)
+  end
+
+  it "raises outside a transaction, so the event can't outlive a rolled-back change" do
+    allow(OutboxEvent.connection).to receive(:transaction_open?).and_return(false)
+
+    expect { described_class.new.publish("ticket:created", { id: 1 }) }.to raise_error(/inside the transaction/)
+    expect(OutboxEvent.count).to eq(0)
+  end
+
+  it "raises for a subject that has no topic" do
+    expect { described_class.new.publish("nonsense:happened", { id: 1 }) }.to raise_error(KeyError)
   end
 end

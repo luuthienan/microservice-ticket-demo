@@ -1,13 +1,18 @@
-# Unlocks the ticket.
+# Unlocks the ticket, but only for the order that holds it, so a replayed cancellation can't
+# release the ticket from a newer order.
 class TicketRelease
   include ActiveModel::Model
 
-  attr_accessor :ticket_id
+  attr_accessor :ticket_id, :order_id
 
   def call
     ticket = Ticket.find(ticket_id)
-    ticket.update!(order_id: nil)
-    EventPublisher.new.publish("ticket:updated", event_data(ticket)) if ticket.saved_changes?
+    return ticket unless ticket.order_id == order_id
+
+    ApplicationRecord.transaction do
+      ticket.update!(order_id: nil)
+      EventPublisher.new.publish("ticket:updated", event_data(ticket)) if ticket.saved_changes?
+    end
     ticket
   end
 

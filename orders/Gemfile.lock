@@ -93,6 +93,14 @@ GEM
     drb (2.2.3)
     erb (6.0.7)
     erubi (1.13.1)
+    ffi (1.17.4-aarch64-linux-gnu)
+    ffi (1.17.4-aarch64-linux-musl)
+    ffi (1.17.4-arm-linux-gnu)
+    ffi (1.17.4-arm-linux-musl)
+    ffi (1.17.4-arm64-darwin)
+    ffi (1.17.4-x86_64-darwin)
+    ffi (1.17.4-x86_64-linux-gnu)
+    ffi (1.17.4-x86_64-linux-musl)
     globalid (1.4.0)
       activesupport (>= 6.1)
     i18n (1.15.2)
@@ -119,6 +127,7 @@ GEM
       net-smtp
     marcel (1.2.1)
     mini_mime (1.1.5)
+    mini_portile2 (2.8.9)
     minitest (6.0.6)
       drb (~> 2.0)
       prism (~> 1.5)
@@ -205,6 +214,42 @@ GEM
       logger
       prism (>= 1.6.0)
       tsort
+    rdkafka (0.30.0)
+      ffi (~> 1.17.1)
+      json (> 2.0)
+      logger
+      mini_portile2 (~> 2.6)
+      rake (> 12)
+    rdkafka (0.30.0-aarch64-linux-gnu)
+      ffi (~> 1.17.1)
+      json (> 2.0)
+      logger
+      mini_portile2 (~> 2.6)
+      rake (> 12)
+    rdkafka (0.30.0-aarch64-linux-musl)
+      ffi (~> 1.17.1)
+      json (> 2.0)
+      logger
+      mini_portile2 (~> 2.6)
+      rake (> 12)
+    rdkafka (0.30.0-arm64-darwin)
+      ffi (~> 1.17.1)
+      json (> 2.0)
+      logger
+      mini_portile2 (~> 2.6)
+      rake (> 12)
+    rdkafka (0.30.0-x86_64-linux-gnu)
+      ffi (~> 1.17.1)
+      json (> 2.0)
+      logger
+      mini_portile2 (~> 2.6)
+      rake (> 12)
+    rdkafka (0.30.0-x86_64-linux-musl)
+      ffi (~> 1.17.1)
+      json (> 2.0)
+      logger
+      mini_portile2 (~> 2.6)
+      rake (> 12)
     rdoc (8.1.0)
       erb
       prism (>= 1.6.0)
@@ -234,6 +279,12 @@ GEM
       rspec-support (>= 3.13.0, < 5.0.0)
     rspec-support (3.13.7)
     securerandom (0.4.1)
+    sidekiq (8.1.7)
+      connection_pool (>= 3.0.0)
+      json (>= 2.16.0)
+      logger (>= 1.7.0)
+      rack (>= 3.2.0)
+      redis-client (>= 0.29.0)
     thor (1.5.0)
     timeout (0.6.1)
     tsort (0.2.0)
@@ -264,8 +315,10 @@ DEPENDENCIES
   pg
   puma
   rails (~> 8.1.4)
+  rdkafka
   redis
   rspec-rails
+  sidekiq
 
 BUNDLED WITH
    2.6.9
