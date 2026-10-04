@@ -50,7 +50,7 @@ RSpec.describe "Orders", type: :request do
       order = Order.last
       expect(order).to have_attributes(user_id:, status: "created", ticket:)
       expect(order.expires_at).to be_within(1.minute).of(15.minutes.from_now)
-      expect(Events).to have_received(:publish).with("order:created", hash_including(id: order.id, version: 0))
+      expect(event_publisher).to have_received(:publish).with("order:created", hash_including(id: order.id, version: 0))
     end
   end
 
@@ -98,7 +98,7 @@ RSpec.describe "Orders", type: :request do
 
       expect(response).to have_http_status(:no_content)
       expect(order.reload).to be_cancelled
-      expect(Events).to have_received(:publish)
+      expect(event_publisher).to have_received(:publish)
         .with("order:cancelled", { id: order.id, version: 1, ticket: { id: ticket.id } })
     end
 
@@ -113,7 +113,7 @@ RSpec.describe "Orders", type: :request do
         expect(response.parsed_body["errors"].first["message"]).to eq("Order cannot be cancelled")
         expect(order.reload.status).to eq(status.to_s)
       end
-      expect(Events).not_to have_received(:publish)
+      expect(event_publisher).not_to have_received(:publish)
     end
 
     it "rejects another user's order" do

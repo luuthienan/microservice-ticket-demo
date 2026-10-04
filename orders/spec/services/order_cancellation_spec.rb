@@ -9,7 +9,7 @@ RSpec.describe OrderCancellation do
     described_class.new(order:, user_id:).call
 
     expect(order.reload).to be_cancelled
-    expect(Events).to have_received(:publish)
+    expect(event_publisher).to have_received(:publish)
       .with("order:cancelled", { id: order.id, version: 1, ticket: { id: ticket.id } })
   end
 
@@ -26,13 +26,13 @@ RSpec.describe OrderCancellation do
     expect(service.call).to be(false)
     expect(service.errors.full_messages).to eq(["Order cannot be cancelled"])
     expect(order.reload).to be_complete
-    expect(Events).not_to have_received(:publish)
+    expect(event_publisher).not_to have_received(:publish)
   end
 
   it "rejects another user's order" do
     expect { described_class.new(order:, user_id: next_id).call }.to raise_error(ApiError::NotAuthorized)
 
     expect(order.reload).to be_created
-    expect(Events).not_to have_received(:publish)
+    expect(event_publisher).not_to have_received(:publish)
   end
 end

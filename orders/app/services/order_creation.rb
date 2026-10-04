@@ -14,7 +14,7 @@ class OrderCreation
     end
 
     order = Order.create!(user_id:, ticket:, expires_at: EXPIRATION_WINDOW.from_now)
-    Events.publish("order:created", event_data(order))
+    EventPublisher.new.publish("order:created", event_data(order))
     order
   end
 

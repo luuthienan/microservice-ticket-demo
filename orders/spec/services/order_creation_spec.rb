@@ -11,7 +11,7 @@ RSpec.describe OrderCreation do
 
     expect(order).to have_attributes(user_id:, status: "created", ticket:)
     expect(order.expires_at).to be_within(1.minute).of(15.minutes.from_now)
-    expect(Events).to have_received(:publish).with(
+    expect(event_publisher).to have_received(:publish).with(
       "order:created",
       { id: order.id, version: 0, status: "created", user_id:, expires_at: order.expires_at.iso8601,
         ticket: { id: ticket.id, price: ticket.price } }
@@ -25,7 +25,7 @@ RSpec.describe OrderCreation do
     expect(service.call).to be(false)
     expect(service.errors.full_messages).to eq(["Ticket is already reserved"])
     expect(Order.count).to eq(1)
-    expect(Events).not_to have_received(:publish)
+    expect(event_publisher).not_to have_received(:publish)
   end
 
   it "raises RecordNotFound for an unknown ticket" do

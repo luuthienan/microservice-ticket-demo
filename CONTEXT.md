@@ -15,3 +15,11 @@ _Avoid_: Revision, sequence number
 **Reservation**:
 A ticket being held by an order, so nobody else can order it. It lasts until that order is cancelled or expires.
 _Avoid_: Lock, hold
+
+**Event**:
+A fact a service announces for other services to act on, such as a record being created or an order expiring. Copies follow the Events about their source record.
+_Avoid_: Message, notification
+
+**Subject**:
+The name an Event is published under, such as `ticket:updated`. A service listens for the Subjects it cares about.
+_Avoid_: Topic, channel, stream

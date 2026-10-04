@@ -10,13 +10,13 @@ RSpec.describe TicketUpdate do
     expect(service.call).to eq(ticket)
 
     expect(ticket.reload).to have_attributes(title: "new", price: 20)
-    expect(Events).to have_received(:publish).with("ticket:updated", hash_including(title: "new", version: 1))
+    expect(event_publisher).to have_received(:publish).with("ticket:updated", hash_including(title: "new", version: 1))
   end
 
   it "does not publish when nothing changed" do
     service(attributes: { title: "concert" }).call
 
-    expect(Events).not_to have_received(:publish)
+    expect(event_publisher).not_to have_received(:publish)
   end
 
   it "fails with an error when the ticket is reserved" do

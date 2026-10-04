@@ -65,7 +65,7 @@ RSpec.describe "Tickets", type: :request do
 
       expect(response).to have_http_status(:created)
       expect(Ticket.last).to have_attributes(title: "concert", user_id:)
-      expect(Events).to have_received(:publish).with("ticket:created", hash_including(title: "concert"))
+      expect(event_publisher).to have_received(:publish).with("ticket:created", hash_including(title: "concert"))
     end
   end
 
@@ -110,7 +110,7 @@ RSpec.describe "Tickets", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(ticket.reload).to have_attributes(title: "new", price: 99)
-      expect(Events).to have_received(:publish).with("ticket:updated", hash_including(title: "new", version: 1))
+      expect(event_publisher).to have_received(:publish).with("ticket:updated", hash_including(title: "new", version: 1))
     end
   end
 end

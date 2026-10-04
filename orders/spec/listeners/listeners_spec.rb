@@ -43,7 +43,7 @@ RSpec.describe "listeners" do
       described_class.new.handle("order_id" => order.id)
 
       expect(order.reload).to be_cancelled
-      expect(Events).to have_received(:publish).with("order:cancelled", hash_including(id: order.id))
+      expect(event_publisher).to have_received(:publish).with("order:cancelled", hash_including(id: order.id))
     end
 
     it "leaves a complete order alone" do
@@ -52,7 +52,7 @@ RSpec.describe "listeners" do
       described_class.new.handle("order_id" => order.id)
 
       expect(order.reload).to be_complete
-      expect(Events).not_to have_received(:publish)
+      expect(event_publisher).not_to have_received(:publish)
     end
   end
 

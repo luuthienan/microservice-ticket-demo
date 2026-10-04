@@ -78,7 +78,7 @@ RSpec.describe "Payments", type: :request do
     payment = Payment.last
     expect(payment).to have_attributes(order:, stripe_id: "ch_123")
     expect(response.parsed_body).to eq("id" => payment.id)
-    expect(Events).to have_received(:publish)
+    expect(event_publisher).to have_received(:publish)
       .with("payment:created", { id: payment.id, order_id: order.id, stripe_id: "ch_123" })
   end
 end

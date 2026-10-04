@@ -7,7 +7,7 @@ class TicketReservation
   def call
     ticket = Ticket.find(ticket_id)
     ticket.update!(order_id:)
-    Events.publish("ticket:updated", event_data(ticket)) if ticket.saved_changes?
+    EventPublisher.new.publish("ticket:updated", event_data(ticket)) if ticket.saved_changes?
     ticket
   end
 

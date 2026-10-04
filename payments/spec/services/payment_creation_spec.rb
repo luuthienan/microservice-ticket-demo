@@ -14,7 +14,7 @@ RSpec.describe PaymentCreation do
     expect(Stripe::Charge).to have_received(:create)
       .with(amount: 2050, currency: "usd", source: "tok_visa", description: "Order #{order.id}")
     expect(payment).to have_attributes(order:, stripe_id: "ch_123")
-    expect(Events).to have_received(:publish)
+    expect(event_publisher).to have_received(:publish)
       .with("payment:created", { id: payment.id, order_id: order.id, stripe_id: "ch_123" })
   end
 
