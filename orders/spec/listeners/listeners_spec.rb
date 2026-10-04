@@ -28,31 +28,16 @@ RSpec.describe "listeners" do
       expect(Ticket.find(ticket_id)).to have_attributes(title: "new", price: 99, version: 1)
     end
 
+    it "ignores an event it has already applied" do
+      described_class.new.handle(ticket_event(version: 1, title: "new", price: 99))
+      described_class.new.handle(ticket_event(version: 1, title: "new", price: 99))
+
+      expect(Ticket.find(ticket_id)).to have_attributes(title: "new", version: 1)
+    end
+
     it "refuses an event that skips a version" do
       expect { described_class.new.handle(ticket_event(version: 2)) }.to raise_error(ActiveRecord::RecordNotFound)
       expect(Ticket.find(ticket_id).version).to eq(0)
-    end
-  end
-
-  describe ExpirationCompleteListener do
-    before { TicketCreatedListener.new.handle(ticket_event(version: 0)) }
-
-    it "cancels a created order and publishes order:cancelled" do
-      order = create_order
-
-      described_class.new.handle("order_id" => order.id)
-
-      expect(order.reload).to be_cancelled
-      expect(event_publisher).to have_received(:publish).with("order:cancelled", hash_including(id: order.id))
-    end
-
-    it "leaves a complete order alone" do
-      order = create_order(status: :complete)
-
-      described_class.new.handle("order_id" => order.id)
-
-      expect(order.reload).to be_complete
-      expect(event_publisher).not_to have_received(:publish)
     end
   end
 

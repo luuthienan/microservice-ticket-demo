@@ -3,6 +3,9 @@ ENV["JWT_KEY"] ||= "test-key"
 
 require_relative "../config/environment"
 require "rspec/rails"
+require "sidekiq/test_api"
+
+Sidekiq.testing!(:fake)
 
 ActiveRecord::Migration.maintain_test_schema!
 
@@ -17,7 +20,7 @@ def sign_in_as(user_id = next_id)
   { "Cookie" => "jwt=#{token}" }
 end
 
-# Stands in for every EventPublisher, so specs never reach Redis. Assert on `event_publisher`.
+# Stands in for every EventPublisher, so specs never write to the outbox. Assert on `event_publisher`.
 RSpec.shared_context "event publisher" do
   let(:event_publisher) { instance_spy(EventPublisher) }
 
@@ -27,4 +30,5 @@ end
 RSpec.configure do |config|
   config.use_transactional_fixtures = true
   config.include_context "event publisher"
+  config.before { Sidekiq::Job.clear_all }
 end
