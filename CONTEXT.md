@@ -4,6 +4,14 @@ Users sell tickets and buy them through orders that are paid for and expire if l
 
 ## Language
 
+**Seller**:
+The user who listed a ticket for sale. A ticket belongs to its seller, who is the only one who can edit it. The "My Tickets" page lists a seller's tickets in every status.
+_Avoid_: Owner, vendor
+
+**Buyer**:
+The user who places an order for a ticket. A buyer sees their orders on the "My Orders" page. The tickets service does not know who the buyer is; only the orders service does.
+_Avoid_: Customer, purchaser
+
 **Copy**:
 A service's local stand-in for a record owned by another service, kept current through events. A copy always has the same id as its source record.
 _Avoid_: Replica, snapshot, mirror
