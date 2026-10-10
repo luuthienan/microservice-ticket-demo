@@ -5,7 +5,7 @@ Users sell tickets and buy them through orders that are paid for and expire if l
 ## Language
 
 **Seller**:
-The user who listed a ticket for sale. A ticket belongs to its seller, who is the only one who can edit it. The "My Tickets" page lists a seller's tickets in every status.
+The user who listed a ticket for sale. A ticket belongs to its seller, who is the only one who can edit it, and can cancel it while it is Available. The "My Tickets" page lists a seller's tickets in every status.
 _Avoid_: Owner, vendor
 
 **Buyer**:
@@ -43,7 +43,7 @@ A ticket nobody holds, which can be ordered and edited by its seller.
 A ticket whose order was paid for. It stays with that order and can no longer be ordered or edited.
 
 **Cancelled** (ticket):
-A ticket its seller withdrew from sale. It can no longer be ordered or edited. Not the same as a cancelled Order, which only frees the ticket to be ordered again.
+A ticket its seller cancelled while it was Available, taking it off sale. It can no longer be ordered or edited. Not the same as a cancelled Order, which only frees the ticket to be ordered again.
 
 **Event**:
 A fact a service announces for other services to act on, such as a record being created or an order being cancelled. Copies follow the Events about their source record.

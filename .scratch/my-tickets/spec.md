@@ -8,7 +8,7 @@ A signed-in **Seller** can see the tickets they listed, in every status, on one 
 
 - "My tickets" are the tickets the user listed for sale. What the user bought stays on My Orders.
 - All four ticket statuses are shown (Available, Reserved, Sold, Cancelled), newest first. No filters, no pagination.
-- A row shows Title, Price, Status and a View link to the ticket page. It shows no Buyer, and has no Edit or Withdraw action (see `.scratch/ticket-withdraw/`).
+- A row shows Title, Price, Status and a View link to the ticket page. It shows no Buyer, and has no Edit action. An Available row also has a Cancel button next to View (after a confirm; the row then shows "Cancelled"). Other statuses have no button (see `.scratch/ticket-withdraw/`).
 - With no tickets the page says "You have no tickets yet."; the New Ticket button is always shown.
 - The page is at `/tickets/mine`, linked from the header as "My Tickets" (signed-in users only, before "My Orders"). Signed-out visitors are redirected to `/auth/signin`.
 - The tickets service serves it at `GET /api/v1/tickets/mine` (requires sign in). The public `GET /api/v1/tickets` is unchanged.
