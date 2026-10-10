@@ -1,6 +1,8 @@
 import Route from "next/router";
 import useRequest from "../../hooks/use-request";
 
+const STATUS_LABELS = { available: "Available", reserved: "Reserved", sold: "Sold", cancelled: "Cancelled" };
+
 const TicketShow = ({ ticket }) => {
   const { doRequest, errors } = useRequest({
     url: "/api/v1/orders",
@@ -17,8 +19,13 @@ const TicketShow = ({ ticket }) => {
     <div>
       <h1>{ticket.title}</h1>
       <h4>Price: ${ticket.price}</h4>
+      <h5>Status: {STATUS_LABELS[ticket.status] || ticket.status}</h5>
       {errors}
-      <button className="btn btn-primary" onClick={doRequest}>
+      <button
+        className="btn btn-primary"
+        onClick={doRequest}
+        disabled={ticket.status !== "available"}
+      >
         Purchase
       </button>
     </div>

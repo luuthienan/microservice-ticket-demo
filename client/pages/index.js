@@ -1,12 +1,15 @@
 import Link from "next/link";
 import buildClient from "../api/build-client";
 
+const STATUS_LABELS = { available: "Available", reserved: "Reserved", sold: "Sold", cancelled: "Cancelled" };
+
 const LandingPage = ({ currentUser, tickets }) => {
   const ticketList = tickets.map(ticket => {
     return (
       <tr key={ticket.id}>
         <td>{ticket.title}</td>
         <td>${ticket.price}</td>
+        <td>{STATUS_LABELS[ticket.status] || ticket.status}</td>
         <td>
           <Link href={"/tickets/[ticketId]"} as={`/tickets/${ticket.id}`}>
             View
@@ -31,6 +34,7 @@ const LandingPage = ({ currentUser, tickets }) => {
           <tr>
             <th>Title</th>
             <th>Price</th>
+            <th>Status</th>
             <th>Link</th>
           </tr>
         </thead>
