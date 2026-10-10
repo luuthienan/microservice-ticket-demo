@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Router from "next/router";
 import { loadStripe } from "@stripe/stripe-js";
 import { CardElement, Elements, useElements, useStripe } from "@stripe/react-stripe-js";
 import useRequest from "../../hooks/use-request";
@@ -12,6 +13,7 @@ const useSecondsLeft = (expiresAt) => {
   const [secondsLeft, setSecondsLeft] = useState(null);
 
   useEffect(() => {
+    if (!expiresAt) return undefined; // a Pending order has no deadline yet
     const tick = () => setSecondsLeft(Math.max(0, Math.round((new Date(expiresAt) - Date.now()) / 1000)));
     tick();
     const timer = setInterval(tick, 1000);
@@ -65,9 +67,21 @@ const PaymentForm = ({ orderId, onPaid }) => {
   );
 };
 
+// A Pending order has no deadline until the tickets service confirms its ticket, then it can be paid or,
+// if the ticket changed in the meantime, it is cancelled. Reload the order until one of those happens.
+const useRefreshWhilePending = (order) => {
+  useEffect(() => {
+    if (order.status !== "created") return undefined;
+
+    const timer = setInterval(() => Router.replace(Router.asPath), 1000);
+    return () => clearInterval(timer);
+  }, [order.status]);
+};
+
 const OrderShow = ({ order }) => {
   const secondsLeft = useSecondsLeft(order.expires_at);
   const [paid, setPaid] = useState(false);
+  useRefreshWhilePending(order);
 
   const renderPayment = () => {
     if (paid) {
@@ -80,8 +94,11 @@ const OrderShow = ({ order }) => {
     if (order.status === "complete") {
       return <div className="alert alert-success">Already paid.</div>;
     }
+    if (order.status === "created") {
+      return <div className="alert alert-info">Confirming that the ticket is still available...</div>;
+    }
     if (order.status === "cancelled" || secondsLeft === 0) {
-      return <div className="alert alert-warning">Order expired.</div>;
+      return <div className="alert alert-warning">Order cancelled or expired.</div>;
     }
     if (!stripePromise) {
       return <div className="alert alert-danger">Payments are not configured.</div>;

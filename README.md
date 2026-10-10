@@ -7,7 +7,7 @@ It is a rewrite of the Node.js `ticketing` demo; the Next.js client is unchanged
 | ------------ | -------------------------------------------------------------- | ----------------- |
 | `auth`       | Sign up, sign in, sign out, current user (JWT in a cookie)     | `auth_*`          |
 | `tickets`    | Create, edit and list tickets; locks a ticket while it is ordered | `tickets_*`    |
-| `orders`     | Create and cancel orders; orders expire after 1 minute by default (Sidekiq) | `orders_*`    |
+| `orders`     | Create and cancel orders; orders wait for the ticket to be confirmed, then expire after 1 minute by default (Sidekiq) | `orders_*`    |
 | `payments`   | Charge an order with Stripe                                    | `payments_*`      |
 | `client`     | Next.js frontend                                               |                   |
 
@@ -22,8 +22,12 @@ See `docs/adr/0002-kafka-topic-per-owning-service.md`.
 
 ```
 ticket:created, ticket:updated  tickets  -> orders
-order:created                   orders   -> tickets, payments
+ticket:reserved                 tickets  -> orders
+ticket:reservation-rejected     tickets  -> orders
+order:created                   orders   -> tickets
+order:awaiting_payment          orders   -> payments
 order:cancelled                 orders   -> tickets, payments
+order:completed                 orders   -> tickets
 payment:created                 payments -> orders
 ```
 
@@ -39,8 +43,15 @@ Copies of another service's data (the ticket copy in `orders`, the order copy in
 An update is applied only when it is exactly one version ahead. One the copy already has is ignored, so handling an
 event twice is harmless. A gap raises and goes through the retry and dead-letter path.
 
-Order expiry is not an event: `orders` schedules a Sidekiq job when it creates an order (Redis holds the jobs) and
-the job cancels the order if it is still unpaid. The window is `EXPIRATION_WINDOW_SECONDS` (default 60).
+**Reservation.** An order starts Pending and carries the version of the ticket copy it was placed from. `tickets`
+reserves the ticket only if it is still available at that version (the check is part of the same optimistic-lock
+`UPDATE`, so a seller's edit and a reservation can't both win) and publishes `ticket:reserved`; `orders` then moves
+the order to awaiting payment. Otherwise `tickets` publishes `ticket:reservation-rejected` and `orders` cancels
+the order. See `docs/adr/0005-tickets-confirms-reservations.md`.
+
+Order expiry is not an event: when an order becomes awaiting payment, `orders` schedules a Sidekiq job (Redis holds
+the jobs) and the job cancels the order if it is still unpaid. The window is `EXPIRATION_WINDOW_SECONDS`
+(default 60). A Pending order has no deadline.
 
 ### Replay
 

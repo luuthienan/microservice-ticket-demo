@@ -1,5 +1,5 @@
 namespace :events do
-  consumer = -> { EventConsumer.new("payments-service", [OrderCreatedListener, OrderCancelledListener]) }
+  consumer = -> { EventConsumer.new("payments-service", [OrderAwaitingPaymentListener, OrderCancelledListener]) }
 
   desc "Listen for events from other services"
   task listen: :environment do

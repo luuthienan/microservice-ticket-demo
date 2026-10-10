@@ -2,7 +2,7 @@ require "rails_helper"
 
 RSpec.describe "Payments", type: :request do
   let(:user_id) { next_id }
-  let(:order) { Order.create!(id: next_id, user_id:, price: 20.5, status: :created) }
+  let(:order) { Order.create!(id: next_id, user_id:, price: 20.5, status: :awaiting_payment) }
 
   before { allow(Stripe::Charge).to receive(:create).and_return(double(id: "ch_123")) }
 
