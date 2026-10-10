@@ -15,6 +15,6 @@ class TicketCreation
 
   def event_data(ticket)
     { id: ticket.id, title: ticket.title, price: ticket.price, user_id: ticket.user_id,
-      order_id: ticket.order_id, version: ticket.lock_version }
+      order_id: ticket.order_id, status: ticket.status, version: ticket.lock_version }
   end
 end

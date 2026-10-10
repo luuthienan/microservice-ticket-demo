@@ -19,13 +19,15 @@ RSpec.describe TicketUpdate do
     expect(event_publisher).not_to have_received(:publish)
   end
 
-  it "fails with an error when the ticket is reserved" do
-    ticket.update!(order_id: next_id)
-    result = service
+  { reserved: { order_id: 1 }, sold: { order_id: 1 }, cancelled: {} }.each do |status, extra|
+    it "fails with an error when the ticket is #{status}" do
+      ticket.update!(status:, **extra)
+      result = service
 
-    expect(result.call).to be(false)
-    expect(result.errors.full_messages).to eq(["Cannot edit a reserved ticket"])
-    expect(ticket.reload.title).to eq("concert")
+      expect(result.call).to be(false)
+      expect(result.errors.full_messages).to eq(["Cannot edit a #{status} ticket"])
+      expect(ticket.reload.title).to eq("concert")
+    end
   end
 
   it "rejects a user who does not own the ticket" do
