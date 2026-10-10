@@ -1,22 +1,43 @@
 import Link from "next/link";
 import Router from "next/router";
 import { STATUS_LABELS } from "../../components/ticket-status";
+import useRequest from "../../hooks/use-request";
+
+const TicketRow = ({ ticket }) => {
+  const { doRequest, errors } = useRequest({
+    url: `/api/v1/tickets/${ticket.id}/cancel`,
+    method: "post",
+    onSuccess: () => Router.replace(Router.asPath),
+  });
+
+  const cancel = () => {
+    if (window.confirm("Cancel this ticket? This can't be undone.")) {
+      doRequest();
+    }
+  };
+
+  return (
+    <tr>
+      <td>{ticket.title}</td>
+      <td>${ticket.price}</td>
+      <td>{STATUS_LABELS[ticket.status] || ticket.status}</td>
+      <td>
+        <Link href={"/tickets/[ticketId]"} as={`/tickets/${ticket.id}`}>
+          View
+        </Link>
+        {ticket.status === "available" && (
+          <button className="btn btn-link text-danger p-0 ms-3" onClick={cancel}>
+            Cancel
+          </button>
+        )}
+        {errors}
+      </td>
+    </tr>
+  );
+};
 
 const MyTickets = ({ tickets }) => {
-  const ticketList = tickets.map(ticket => {
-    return (
-      <tr key={ticket.id}>
-        <td>{ticket.title}</td>
-        <td>${ticket.price}</td>
-        <td>{STATUS_LABELS[ticket.status] || ticket.status}</td>
-        <td>
-          <Link href={"/tickets/[ticketId]"} as={`/tickets/${ticket.id}`}>
-            View
-          </Link>
-        </td>
-      </tr>
-    );
-  });
+  const ticketList = tickets.map(ticket => <TicketRow key={ticket.id} ticket={ticket} />);
 
   return (
     <div>
