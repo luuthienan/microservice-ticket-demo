@@ -1,14 +1,14 @@
-# Let a seller withdraw a ticket
+# Let a seller cancel an available ticket
 
 Status: ready-for-human
 
-The `cancelled` ticket status exists and is guarded (a cancelled ticket can't be ordered or edited), but nothing sets it yet. Add the action that lets a seller withdraw their listing, moving it `available -> cancelled` (terminal). Publish `ticket:updated` so orders' Copy follows.
+The `cancelled` ticket status existed and was guarded (a cancelled ticket can't be ordered or edited), but nothing set it. A **Seller** can now cancel their own **Available** ticket from the My Tickets page, moving it `available -> cancelled` (terminal). `ticket:updated` is published so orders' Copy follows.
 
-Rules to decide before building (not settled yet):
+## Decisions
 
-- Can a seller withdraw a ticket that is Reserved (an unpaid order exists)? If yes, what happens to that order: cancel it, or let it expire first?
-- Can a seller withdraw a Sold ticket? Probably not, since the buyer has paid.
-- How is it exposed: a `DELETE /api/v1/tickets/:id`, or an explicit action?
-- How does the client show a Cancelled ticket in the list?
+- Only an Available ticket can be cancelled. A Reserved, Sold or already Cancelled ticket is refused with 400 `Cannot cancel a <status> ticket`. Cancelling a Reserved ticket is open: see `02-cancel-reserved-ticket.md`.
+- Exposed as the explicit action `POST /api/v1/tickets/:id/cancel`, not `DELETE`, because the ticket stays and only its status changes. It requires sign in; an unknown ticket is 404, a user who is not the seller is 401 (as for editing), a reservation that wins the race is 409.
+- The status change bumps `lock_version`, so a reservation made against the old Version is rejected (ADR 0005).
+- On My Tickets, an Available row shows a Cancel button next to View, behind a confirm. After a cancel the row stays and shows "Cancelled". Other statuses show no button.
 
-See `docs/adr/0004-ticket-status-source-of-truth.md` and the Ticket status terms in `CONTEXT.md`.
+See `docs/adr/0004-ticket-status-source-of-truth.md`, `docs/adr/0005-tickets-confirms-reservations.md` and the Ticket status terms in `CONTEXT.md`.
