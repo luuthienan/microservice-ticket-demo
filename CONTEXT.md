@@ -17,8 +17,21 @@ A user's request to buy a ticket. It is awaiting payment until it is paid or can
 _Avoid_: Purchase, booking
 
 **Reservation**:
-A ticket being held by an order, so nobody else can order it. It lasts until that order is cancelled or expires.
+A ticket being held by an order, so nobody else can order it. It lasts until that order is cancelled or expires. While it lasts, the ticket's status is Reserved.
 _Avoid_: Lock, hold
+
+**Ticket status**:
+Where a ticket stands in its life: Available, Reserved, Sold or Cancelled. The tickets service owns it; other services follow it through their Copy.
+_Avoid_: State, Purchased, Created
+
+**Available**:
+A ticket nobody holds, which can be ordered and edited by its seller.
+
+**Sold**:
+A ticket whose order was paid for. It stays with that order and can no longer be ordered or edited.
+
+**Cancelled** (ticket):
+A ticket its seller withdrew from sale. It can no longer be ordered or edited. Not the same as a cancelled Order, which only frees the ticket to be ordered again.
 
 **Event**:
 A fact a service announces for other services to act on, such as a record being created or an order being cancelled. Copies follow the Events about their source record.
