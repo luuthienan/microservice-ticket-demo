@@ -2,35 +2,22 @@ require "rails_helper"
 
 RSpec.describe Ticket do
   let(:ticket) { Ticket.create!(id: next_id, title: "concert", price: 20) }
-  let(:order_attrs) { { user_id: next_id, ticket:, expires_at: 15.minutes.from_now } }
 
-  describe "#available?" do
-    it "follows the status the tickets service sent" do
-      expect(ticket).to be_available
-
-      %w[reserved sold cancelled].each do |status|
-        ticket.status = status
-
-        expect(ticket).not_to be_available
-      end
-    end
+  it "is available until the tickets service says otherwise" do
+    expect(ticket).to be_available
+    expect(ticket).not_to be_reserved
   end
 
-  describe "#reserved?" do
-    it "is false without orders" do
-      expect(ticket).not_to be_reserved
-    end
+  it "follows the status the tickets service sent" do
+    ticket.status = "reserved"
 
-    it "is true with an active order" do
-      Order.create!(order_attrs)
+    expect(ticket).to be_reserved
+    expect(ticket).not_to be_available
+  end
 
-      expect(ticket).to be_reserved
-    end
+  it "is not reserved just because it has an order, until the tickets service says so" do
+    Order.create!(user_id: next_id, ticket:, expires_at: 15.minutes.from_now)
 
-    it "is false when the order is cancelled" do
-      Order.create!(order_attrs.merge(status: :cancelled))
-
-      expect(ticket).not_to be_reserved
-    end
+    expect(ticket).not_to be_reserved
   end
 end
