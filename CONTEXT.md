@@ -9,15 +9,19 @@ A service's local stand-in for a record owned by another service, kept current t
 _Avoid_: Replica, snapshot, mirror
 
 **Version**:
-A counter on a record that a Copy follows. A Copy applies an update only when it is exactly one Version ahead of itself. An update that is not ahead is already applied and is ignored; one that is more than one ahead means an update is missing and is not applied.
+A counter on a record that a Copy follows. A Copy applies an update only when it is exactly one Version ahead of itself. An update that is not ahead is already applied and is ignored; one that is more than one ahead means an update is missing and is not applied. An order records the Version of the ticket Copy it was placed from, and the ticket is reserved for it only if the ticket is still at that Version.
 _Avoid_: Revision, sequence number
 
 **Order**:
-A user's request to buy a ticket. It is awaiting payment until it is paid or cancelled; an order left unpaid past its deadline is cancelled. Users see an order as "Awaiting payment", "Paid" or "Cancelled", and an expired order is simply "Cancelled".
+A user's request to buy a ticket. It is Pending until the tickets service confirms the ticket is reserved for it, then awaiting payment until it is paid or cancelled; an order left unpaid past its deadline is cancelled, and one whose reservation is rejected is cancelled. Users see an order as "Pending", "Awaiting payment", "Paid" or "Cancelled", and an expired order is simply "Cancelled".
 _Avoid_: Purchase, booking
 
+**Pending**:
+An order whose ticket the tickets service has not yet confirmed as reserved for it. It cannot be paid and has no payment deadline. The user may cancel it.
+_Avoid_: Processing, created
+
 **Reservation**:
-A ticket being held by an order, so nobody else can order it. It lasts until that order is cancelled or expires. While it lasts, the ticket's status is Reserved.
+A ticket being held by an order, so nobody else can order it. The tickets service makes it, or rejects it when the ticket was edited since the order was placed or is no longer Available. It lasts until that order is cancelled or expires. While it lasts, the ticket's status is Reserved.
 _Avoid_: Lock, hold
 
 **Ticket status**:

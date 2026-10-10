@@ -1,0 +1,11 @@
+# The tickets service confirms reservations, and orders stay Pending until it does
+
+An order is created Pending and carries the Version of the ticket Copy it was placed from. The tickets service reserves the ticket only if the ticket is still at that Version and Available, with the Version compared in the same `UPDATE ... WHERE lock_version = v` that reserves it, so a seller's edit and a reservation cannot both win. It then publishes `ticket:reserved`, and orders moves the order to awaiting payment, starts its payment deadline and publishes `order:awaiting_payment`. Any failed reservation (edited since, reserved by another order, sold, cancelled) publishes `ticket:reservation-rejected`, and orders cancels the order.
+
+Before this, orders decided from its Copy and tickets reserved any Available ticket. A buyer could order at the old price, the seller could edit, and the ticket was then reserved anyway, so the buyer paid a price the ticket no longer had. A ticket that could not be reserved left its order active with nothing to cancel it but expiry. Only the tickets database can order an edit against a reservation, so the decision lives there.
+
+`ticket:reserved` replaces `ticket:updated` for reservations and carries the whole ticket, so a Copy follows it by the same Version rule. Release and sale stay `ticket:updated`. Payments builds its order Copy from `order:awaiting_payment` instead of `order:created`, so it cannot charge a Pending order, and it takes the price from the reserved ticket.
+
+We compare the exact `lock_version`, which also moves when another order reserves and releases the ticket, so a buyer on an older Copy can be rejected though title and price are unchanged. We accepted that: a refusal is safe where a stale price is not (ADR 0004).
+
+A Pending order has no deadline, so if neither `ticket:reserved` nor `ticket:reservation-rejected` ever reaches orders (a Listener dead-letters), the order stays Pending and, through the unique index on active orders, keeps anyone else from ordering that ticket. We accepted that for now: its buyer can cancel it, and replaying the events fixes the rest. A confirmation timeout would close it if this proves to matter.
