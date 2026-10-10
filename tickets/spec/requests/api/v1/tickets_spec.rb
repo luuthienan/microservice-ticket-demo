@@ -19,6 +19,34 @@ RSpec.describe "Tickets", type: :request do
     end
   end
 
+  describe "GET /api/v1/tickets/mine" do
+    it "requires sign in" do
+      get "/api/v1/tickets/mine"
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it "lists only the caller's tickets, whatever their status" do
+      mine = Ticket.statuses.keys.map { |status| create_ticket(status:) }
+      create_ticket(user_id: next_id)
+
+      get "/api/v1/tickets/mine", headers: sign_in_as(user_id), as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body.map { |t| t["id"] }).to match_array(mine.map(&:id))
+      expect(response.parsed_body.map { |t| t["status"] }).to match_array(%w[available reserved sold cancelled])
+    end
+
+    it "lists the newest ticket first" do
+      older = create_ticket(created_at: 2.days.ago)
+      newer = create_ticket(created_at: 1.day.ago)
+
+      get "/api/v1/tickets/mine", headers: sign_in_as(user_id), as: :json
+
+      expect(response.parsed_body.map { |t| t["id"] }).to eq([newer.id, older.id])
+    end
+  end
+
   describe "GET /api/v1/tickets/:id" do
     it "returns the ticket" do
       ticket = create_ticket

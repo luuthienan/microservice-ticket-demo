@@ -1,8 +1,12 @@
 class Api::V1::TicketsController < ApplicationController
-  before_action :require_auth, only: %i[create update]
+  before_action :require_auth, only: %i[mine create update]
 
   def index
     render json: Ticket.all
+  end
+
+  def mine
+    render json: Ticket.where(user_id: current_user["id"]).order(created_at: :desc, id: :desc)
   end
 
   def show
