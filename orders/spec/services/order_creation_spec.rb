@@ -46,7 +46,7 @@ RSpec.describe OrderCreation do
     expect(ExpireOrderJob.jobs.first).to include("args" => [order.id], "at" => be_within(1).of(order.expires_at.to_f))
   end
 
-  it "fails with an error when the ticket is already reserved" do
+  it "fails with an error when an order holds the ticket but the Copy has not caught up yet" do
     Order.create!(user_id: next_id, ticket:, expires_at: 15.minutes.from_now)
     service = call
 
@@ -69,7 +69,18 @@ RSpec.describe OrderCreation do
     expect(ExpireOrderJob.jobs).to be_empty
   end
 
-  %w[reserved sold cancelled].each do |status|
+  it "fails with an error when the ticket is reserved according to the tickets service" do
+    ticket.update!(status: :reserved)
+    service = call
+
+    expect(service.call).to be(false)
+    expect(service.errors.full_messages).to eq(["Ticket is already reserved"])
+    expect(Order.count).to eq(0)
+    expect(event_publisher).not_to have_received(:publish)
+    expect(ExpireOrderJob.jobs).to be_empty
+  end
+
+  %w[sold cancelled].each do |status|
     it "fails with an error when the ticket is #{status} according to the tickets service" do
       ticket.update!(status:)
       service = call

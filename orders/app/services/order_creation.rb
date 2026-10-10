@@ -8,7 +8,8 @@ class OrderCreation
   ACTIVE_ORDER_INDEX = "index_orders_on_ticket_id_active"
 
   # Returns the new order, or false with errors when the ticket is already reserved or otherwise not available.
-  # The checks below are a fast path; the unique index on active orders is what decides a race.
+  # The checks below read the Copy, which can lag behind the tickets service, so they are a fast path;
+  # the unique index on active orders is what decides a race.
   def call
     ticket = Ticket.find(ticket_id)
     return already_reserved if ticket.reserved?
