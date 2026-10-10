@@ -4,7 +4,7 @@ An order is created Pending and carries the Version of the ticket Copy it was pl
 
 Before this, orders decided from its Copy and tickets reserved any Available ticket. A buyer could order at the old price, the seller could edit, and the ticket was then reserved anyway, so the buyer paid a price the ticket no longer had. A ticket that could not be reserved left its order active with nothing to cancel it but expiry. Only the tickets database can order an edit against a reservation, so the decision lives there.
 
-`ticket:reserved` replaces `ticket:updated` for reservations and carries the whole ticket, so a Copy follows it by the same Version rule. Release and sale stay `ticket:updated`. Payments builds its order Copy from `order:awaiting_payment` instead of `order:created`, so it cannot charge a Pending order, and it takes the price from the reserved ticket.
+`ticket:reserved` replaces `ticket:updated` for reservations and carries the whole ticket, so a Copy follows it by the same Version rule. Release and sale stay `ticket:updated`. Payments still builds its order Copy from `order:created`, so its Order has the same statuses as orders', but it only lets a Copy be paid once `order:awaiting_payment` has moved it on, and that event gives it the price of the reserved ticket (the one in `order:created` may be out of date).
 
 We compare the exact `lock_version`, which also moves when another order reserves and releases the ticket, so a buyer on an older Copy can be rejected though title and price are unchanged. We accepted that: a refusal is safe where a stale price is not (ADR 0004).
 
