@@ -49,7 +49,7 @@ RSpec.describe "Orders", type: :request do
       expect(response).to have_http_status(:created)
       order = Order.last
       expect(order).to have_attributes(user_id:, status: "created", ticket:)
-      expect(order.expires_at).to be_within(5.seconds).of(1.minute.from_now)
+      expect(order.expires_at).to be_nil
       expect(event_publisher).to have_received(:publish).with("order:created", hash_including(id: order.id, version: 0))
     end
   end

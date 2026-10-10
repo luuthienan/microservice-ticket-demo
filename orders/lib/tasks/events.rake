@@ -1,6 +1,7 @@
 namespace :events do
   consumer = lambda do
-    EventConsumer.new("orders-service", [TicketCreatedListener, TicketUpdatedListener, PaymentCreatedListener])
+    EventConsumer.new("orders-service", [TicketCreatedListener, TicketUpdatedListener, TicketReservedListener, TicketReservationRejectedListener,
+                                     PaymentCreatedListener])
   end
 
   desc "Listen for events from other services"

@@ -13,13 +13,22 @@ RSpec.describe OrderCancellation do
       .with("order:cancelled", { id: order.id, version: 1, ticket: { id: ticket.id } })
   end
 
+  it "cancels an order awaiting payment" do
+    order.awaiting_payment!
+
+    described_class.new(order:, user_id:).call
+
+    expect(order.reload).to be_cancelled
+    expect(event_publisher).to have_received(:publish).with("order:cancelled", hash_including(id: order.id))
+  end
+
   it "cancels without an owner check when no user is given (system-initiated)" do
     described_class.new(order:).call
 
     expect(order.reload).to be_cancelled
   end
 
-  it "fails with an error when the order is not created" do
+  it "fails with an error when the order is already paid" do
     order.complete!
     service = described_class.new(order:, user_id:)
 

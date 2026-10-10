@@ -1,13 +1,13 @@
 class OrderCreation
   include ActiveModel::Model
 
-  DEFAULT_EXPIRATION_WINDOW_SECONDS = 60
-
   attr_accessor :ticket_id, :user_id
 
   ACTIVE_ORDER_INDEX = "index_orders_on_ticket_id_active"
 
-  # Returns the new order, or false with errors when the ticket is already reserved or otherwise not available.
+  # Returns the new Pending order, or false with errors when the ticket is already reserved or otherwise not available.
+  # The order records the Version of the ticket Copy it was placed from, so the tickets service can reject it if
+  # the ticket changed since. It has no deadline until the tickets service confirms the reservation (OrderConfirmation).
   # The checks below read the Copy, which can lag behind the tickets service, so they are a fast path;
   # the unique index on active orders is what decides a race.
   def call
@@ -16,12 +16,10 @@ class OrderCreation
     return not_available unless ticket.available?
 
     order = ApplicationRecord.transaction do
-      order = Order.create!(user_id:, ticket:, expires_at: expiration_window.from_now)
+      order = Order.create!(user_id:, ticket:)
       EventPublisher.new.publish("order:created", event_data(order))
       order
     end
-    ExpireOrderJob.perform_at(order.expires_at, order.id)
-    order
   rescue ActiveRecord::RecordNotUnique => e
     raise unless e.message.include?(ACTIVE_ORDER_INDEX)
 
@@ -40,17 +38,8 @@ class OrderCreation
     false
   end
 
-  # How long an unpaid order lasts, from EXPIRATION_WINDOW_SECONDS (default 60).
-  def expiration_window
-    raw = ENV.fetch("EXPIRATION_WINDOW_SECONDS", DEFAULT_EXPIRATION_WINDOW_SECONDS)
-    seconds = Integer(raw, exception: false)
-    raise ArgumentError, "EXPIRATION_WINDOW_SECONDS must be a positive integer, got #{raw.inspect}" unless seconds&.positive?
-
-    seconds.seconds
-  end
-
   def event_data(order)
     { id: order.id, version: order.lock_version, status: order.status, user_id: order.user_id,
-      expires_at: order.expires_at.iso8601, ticket: { id: order.ticket_id, price: order.ticket.price } }
+      ticket: { id: order.ticket_id, price: order.ticket.price, version: order.ticket.version } }
   end
 end
