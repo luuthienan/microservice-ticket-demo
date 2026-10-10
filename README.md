@@ -24,7 +24,7 @@ See `docs/adr/0002-kafka-topic-per-owning-service.md`.
 ticket:created, ticket:updated  tickets  -> orders
 ticket:reserved                 tickets  -> orders
 ticket:reservation-rejected     tickets  -> orders
-order:created                   orders   -> tickets
+order:created                   orders   -> tickets, payments
 order:awaiting_payment          orders   -> payments
 order:cancelled                 orders   -> tickets, payments
 order:completed                 orders   -> tickets

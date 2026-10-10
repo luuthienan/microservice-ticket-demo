@@ -27,8 +27,8 @@ RSpec.describe PaymentCreation do
     expect(Stripe::Charge).not_to have_received(:create)
   end
 
-  it "fails with an error for an order that is not awaiting payment" do
-    order.complete!
+  it "fails with an error for an order that is still Pending" do
+    order.created!
     result = service
 
     expect(result.call).to be(false)
