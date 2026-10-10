@@ -10,7 +10,16 @@ class OrderCompletion
       return false
     end
 
-    order.update!(status: :complete)
+    ApplicationRecord.transaction do
+      order.update!(status: :complete)
+      EventPublisher.new.publish("order:completed", event_data) if order.saved_changes?
+    end
     order
+  end
+
+  private
+
+  def event_data
+    { id: order.id, version: order.lock_version, status: order.status, user_id: order.user_id, ticket: { id: order.ticket_id } }
   end
 end

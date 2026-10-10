@@ -4,14 +4,14 @@
 class TicketCopyUpdate
   include ActiveModel::Model
 
-  attr_accessor :id, :title, :price, :version
+  attr_accessor :id, :title, :price, :status, :version
 
   def call
     ticket = Ticket.find(id)
     return ticket if version <= ticket.version
 
     ticket = Ticket.find_by!(id:, version: version - 1)
-    ticket.update!(title:, price:, version:)
+    ticket.update!(title:, price:, status:, version:)
     ticket
   end
 end

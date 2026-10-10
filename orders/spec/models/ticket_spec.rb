@@ -4,6 +4,18 @@ RSpec.describe Ticket do
   let(:ticket) { Ticket.create!(id: next_id, title: "concert", price: 20) }
   let(:order_attrs) { { user_id: next_id, ticket:, expires_at: 15.minutes.from_now } }
 
+  describe "#available?" do
+    it "follows the status the tickets service sent" do
+      expect(ticket).to be_available
+
+      %w[reserved sold cancelled].each do |status|
+        ticket.status = status
+
+        expect(ticket).not_to be_available
+      end
+    end
+  end
+
   describe "#reserved?" do
     it "is false without orders" do
       expect(ticket).not_to be_reserved

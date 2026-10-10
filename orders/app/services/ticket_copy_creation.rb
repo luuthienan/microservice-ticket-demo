@@ -2,9 +2,9 @@
 class TicketCopyCreation
   include ActiveModel::Model
 
-  attr_accessor :id, :title, :price, :version
+  attr_accessor :id, :title, :price, :status, :version
 
   def call
-    Ticket.find_or_create_by!(id:) { |ticket| ticket.assign_attributes(title:, price:, version:) }
+    Ticket.find_or_create_by!(id:) { |ticket| ticket.assign_attributes(title:, price:, status:, version:) }
   end
 end
