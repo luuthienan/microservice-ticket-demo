@@ -3,10 +3,14 @@ class OrderCompletion
 
   attr_accessor :order
 
-  # Returns the order, or false with errors when it was cancelled in the meantime.
+  # Returns the order, or false with errors when it was cancelled in the meantime or was never confirmed.
   def call
     if order.cancelled?
       errors.add(:base, "Order is cancelled")
+      return false
+    end
+    if order.created?
+      errors.add(:base, "Order is not awaiting payment")
       return false
     end
 

@@ -4,11 +4,11 @@ class OrderCancellation
   # user_id is the requesting user; leave it nil for system-initiated cancellations (e.g. expiry).
   attr_accessor :order, :user_id
 
-  # Returns the order, or false with errors when it is no longer cancellable.
+  # Returns the order, or false with errors when it is no longer cancellable (Pending or awaiting payment).
   def call
     raise ApiError::NotAuthorized if user_id && order.user_id != user_id
 
-    unless order.created?
+    unless order.created? || order.awaiting_payment?
       errors.add(:base, "Order cannot be cancelled")
       return false
     end
