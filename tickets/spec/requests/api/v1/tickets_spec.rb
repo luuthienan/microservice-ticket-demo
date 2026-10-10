@@ -25,7 +25,7 @@ RSpec.describe "Tickets", type: :request do
 
       get "/api/v1/tickets/#{ticket.id}"
 
-      expect(response.parsed_body).to include("title" => "concert", "price" => "20.00", "user_id" => user_id)
+      expect(response.parsed_body).to include("title" => "concert", "price" => "20.00", "user_id" => user_id, "status" => "available")
     end
 
     it "returns 404 for an unknown ticket" do
@@ -97,7 +97,7 @@ RSpec.describe "Tickets", type: :request do
     end
 
     it "rejects editing a reserved ticket" do
-      ticket.update!(order_id: next_id)
+      ticket.update!(status: :reserved, order_id: next_id)
 
       put "/api/v1/tickets/#{ticket.id}", params: { title: "a", price: 1 }, headers: sign_in_as(user_id), as: :json
 

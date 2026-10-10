@@ -9,7 +9,7 @@ RSpec.describe TicketCreation do
     expect(ticket).to have_attributes(title: "concert", price: 10, user_id:)
     expect(event_publisher).to have_received(:publish).with(
       "ticket:created",
-      { id: ticket.id, title: "concert", price: 10, user_id:, order_id: nil, version: 0 }
+      { id: ticket.id, title: "concert", price: 10, user_id:, order_id: nil, status: "available", version: 0 }
     )
   end
 end

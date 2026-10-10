@@ -7,10 +7,10 @@ class TicketRelease
 
   def call
     ticket = Ticket.find(ticket_id)
-    return ticket unless ticket.order_id == order_id
+    return ticket unless ticket.reserved? && ticket.order_id == order_id
 
     ApplicationRecord.transaction do
-      ticket.update!(order_id: nil)
+      ticket.update!(status: :available, order_id: nil)
       EventPublisher.new.publish("ticket:updated", event_data(ticket)) if ticket.saved_changes?
     end
     ticket
@@ -20,6 +20,6 @@ class TicketRelease
 
   def event_data(ticket)
     { id: ticket.id, title: ticket.title, price: ticket.price, user_id: ticket.user_id,
-      order_id: ticket.order_id, version: ticket.lock_version }
+      order_id: ticket.order_id, status: ticket.status, version: ticket.lock_version }
   end
 end

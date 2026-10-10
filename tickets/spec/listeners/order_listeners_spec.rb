@@ -6,23 +6,36 @@ RSpec.describe "order listeners" do
   let(:data) { { "id" => order_id, "ticket" => { "id" => ticket.id } } }
 
   describe OrderCreatedListener do
-    it "locks the ticket and publishes ticket:updated" do
+    it "reserves the ticket and publishes ticket:updated" do
       described_class.new.handle(data)
 
-      expect(ticket.reload.order_id).to eq(order_id)
+      expect(ticket.reload).to have_attributes(status: "reserved", order_id:)
       expect(event_publisher).to have_received(:publish)
-        .with("ticket:updated", hash_including(order_id:, version: ticket.lock_version))
+        .with("ticket:updated", hash_including(order_id:, status: "reserved", version: ticket.lock_version))
     end
   end
 
   describe OrderCancelledListener do
-    it "unlocks the ticket and publishes ticket:updated" do
-      ticket.update!(order_id:)
+    it "makes the ticket available again and publishes ticket:updated" do
+      ticket.update!(status: :reserved, order_id:)
 
       described_class.new.handle(data)
 
-      expect(ticket.reload.order_id).to be_nil
-      expect(event_publisher).to have_received(:publish).with("ticket:updated", hash_including(order_id: nil))
+      expect(ticket.reload).to have_attributes(status: "available", order_id: nil)
+      expect(event_publisher).to have_received(:publish)
+        .with("ticket:updated", hash_including(order_id: nil, status: "available"))
+    end
+  end
+
+  describe OrderCompletedListener do
+    it "marks the ticket sold and publishes ticket:updated" do
+      ticket.update!(status: :reserved, order_id:)
+
+      described_class.new.handle(data)
+
+      expect(ticket.reload).to have_attributes(status: "sold", order_id:)
+      expect(event_publisher).to have_received(:publish)
+        .with("ticket:updated", hash_including(order_id:, status: "sold"))
     end
   end
 end

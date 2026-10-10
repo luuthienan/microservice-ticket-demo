@@ -1,5 +1,7 @@
 namespace :events do
-  consumer = -> { EventConsumer.new("tickets-service", [OrderCreatedListener, OrderCancelledListener]) }
+  consumer = lambda do
+    EventConsumer.new("tickets-service", [OrderCreatedListener, OrderCancelledListener, OrderCompletedListener])
+  end
 
   desc "Listen for events from other services"
   task listen: :environment do

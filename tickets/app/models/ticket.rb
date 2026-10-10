@@ -1,3 +1,3 @@
 class Ticket < ApplicationRecord
-  def reserved? = order_id.present?
+  enum :status, { available: "available", reserved: "reserved", sold: "sold", cancelled: "cancelled" }
 end
