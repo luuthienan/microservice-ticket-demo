@@ -2,11 +2,15 @@ import Link from "next/link";
 import Router from "next/router";
 
 // "Cancelled" also covers orders that expired unpaid: expiry cancels the order.
+// A "created" order is Pending: its ticket is not yet confirmed, so it can't be paid.
 const describeOrder = (order) => {
   if (order.status === "complete") {
     return { label: "Paid", action: "View" };
   }
-  if (order.status === "created" && new Date(order.expires_at) > Date.now()) {
+  if (order.status === "created") {
+    return { label: "Pending", action: "View" };
+  }
+  if (order.status === "awaiting_payment" && new Date(order.expires_at) > Date.now()) {
     return { label: "Awaiting payment", action: "Pay" };
   }
   return { label: "Cancelled", action: "View" };
