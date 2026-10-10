@@ -1,7 +1,6 @@
 import Link from "next/link";
 import buildClient from "../api/build-client";
-
-const STATUS_LABELS = { available: "Available", reserved: "Reserved", sold: "Sold", cancelled: "Cancelled" };
+import { STATUS_LABELS } from "../components/ticket-status";
 
 const LandingPage = ({ currentUser, tickets }) => {
   const ticketList = tickets.map(ticket => {
