@@ -105,6 +105,14 @@ RSpec.describe "Tickets", type: :request do
       expect(response.parsed_body["errors"].first["message"]).to eq("Cannot edit a reserved ticket")
     end
 
+    it "answers 409 when a reservation wins the race" do
+      allow_any_instance_of(Ticket).to receive(:update!).and_raise(ActiveRecord::StaleObjectError)
+
+      put "/api/v1/tickets/#{ticket.id}", params: { title: "new", price: 99 }, headers: sign_in_as(user_id), as: :json
+
+      expect(response).to have_http_status(:conflict)
+    end
+
     it "updates the ticket and publishes ticket:updated" do
       put "/api/v1/tickets/#{ticket.id}", params: { title: "new", price: 99 }, headers: sign_in_as(user_id), as: :json
 

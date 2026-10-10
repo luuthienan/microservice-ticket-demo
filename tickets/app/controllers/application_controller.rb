@@ -9,6 +9,11 @@ class ApplicationController < ActionController::API
     render_errors [{ message: "Not Found" }], 404
   end
 
+  # A write lost a race, e.g. a seller's edit against a reservation. Nothing was saved.
+  rescue_from ActiveRecord::StaleObjectError do
+    render_errors [{ message: "The record was changed by someone else, reload and try again" }], 409
+  end
+
   rescue_from ActiveRecord::RecordInvalid do |error|
     errors = error.record.errors.map { |e| { message: e.full_message, field: e.attribute.to_s } }
     render_errors errors, 400
