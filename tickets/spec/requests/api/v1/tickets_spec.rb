@@ -149,4 +149,55 @@ RSpec.describe "Tickets", type: :request do
       expect(event_publisher).to have_received(:publish).with("ticket:updated", hash_including(title: "new", version: 1))
     end
   end
+
+  describe "POST /api/v1/tickets/:id/cancel" do
+    let!(:ticket) { create_ticket }
+
+    it "returns 404 for an unknown ticket" do
+      post "/api/v1/tickets/#{next_id}/cancel", headers: sign_in_as(user_id), as: :json
+
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it "requires sign in" do
+      post "/api/v1/tickets/#{ticket.id}/cancel", as: :json
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it "rejects a user who does not own the ticket" do
+      post "/api/v1/tickets/#{ticket.id}/cancel", headers: sign_in_as, as: :json
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(ticket.reload).to be_available
+    end
+
+    %w[reserved sold cancelled].each do |status|
+      it "rejects cancelling a #{status} ticket" do
+        ticket.update!(status:, order_id: (next_id unless status == "cancelled"))
+
+        post "/api/v1/tickets/#{ticket.id}/cancel", headers: sign_in_as(user_id), as: :json
+
+        expect(response).to have_http_status(:bad_request)
+        expect(response.parsed_body["errors"].first["message"]).to eq("Cannot cancel a #{status} ticket")
+      end
+    end
+
+    it "answers 409 when a reservation wins the race" do
+      allow_any_instance_of(Ticket).to receive(:update!).and_raise(ActiveRecord::StaleObjectError)
+
+      post "/api/v1/tickets/#{ticket.id}/cancel", headers: sign_in_as(user_id), as: :json
+
+      expect(response).to have_http_status(:conflict)
+    end
+
+    it "cancels the ticket and publishes ticket:updated" do
+      post "/api/v1/tickets/#{ticket.id}/cancel", headers: sign_in_as(user_id), as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to include("id" => ticket.id, "status" => "cancelled")
+      expect(ticket.reload).to be_cancelled
+      expect(event_publisher).to have_received(:publish).with("ticket:updated", hash_including(status: "cancelled", version: 1))
+    end
+  end
 end

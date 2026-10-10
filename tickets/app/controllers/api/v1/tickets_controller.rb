@@ -1,5 +1,5 @@
 class Api::V1::TicketsController < ApplicationController
-  before_action :require_auth, only: %i[mine create update]
+  before_action :require_auth, only: %i[mine create update cancel]
 
   def index
     render json: Ticket.all
@@ -26,6 +26,14 @@ class Api::V1::TicketsController < ApplicationController
     return render_validation_errors(validator) unless validator.valid?
 
     service = TicketUpdate.new(ticket_id: params[:id], user_id: current_user["id"], attributes: ticket_params.to_h)
+    ticket = service.call
+    return render_validation_errors(service) unless ticket
+
+    render json: ticket
+  end
+
+  def cancel
+    service = TicketCancellation.new(ticket_id: params[:id], user_id: current_user["id"])
     ticket = service.call
     return render_validation_errors(service) unless ticket
 

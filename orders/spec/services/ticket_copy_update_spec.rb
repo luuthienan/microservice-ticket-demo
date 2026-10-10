@@ -9,6 +9,12 @@ RSpec.describe TicketCopyUpdate do
     expect(ticket.reload).to have_attributes(title: "game", price: 30, status: "reserved", version: 1)
   end
 
+  it "follows a seller cancelling the ticket" do
+    described_class.new(id: ticket.id, title: "concert", price: 20, status: "cancelled", version: 1).call
+
+    expect(ticket.reload).to have_attributes(status: "cancelled", version: 1)
+  end
+
   it "ignores an update the copy already has, as when an event is replayed" do
     described_class.new(id: ticket.id, title: "game", price: 30, status: "reserved", version: 1).call
     described_class.new(id: ticket.id, title: "old", price: 1, status: "available", version: 1).call
