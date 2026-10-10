@@ -4,10 +4,22 @@ RSpec.describe OrderCompletion do
   let(:ticket) { Ticket.create!(id: next_id, title: "concert", price: 20) }
   let(:order) { Order.create!(user_id: next_id, ticket:, expires_at: 15.minutes.from_now) }
 
-  it "marks the order complete" do
+  it "marks the order complete and publishes order:completed" do
     described_class.new(order:).call
 
     expect(order.reload).to be_complete
+    expect(event_publisher).to have_received(:publish).with(
+      "order:completed",
+      { id: order.id, version: 1, status: "complete", user_id: order.user_id, ticket: { id: ticket.id } }
+    )
+  end
+
+  it "does not publish again for an order that is already complete, as when a payment is replayed" do
+    order.complete!
+
+    described_class.new(order:).call
+
+    expect(event_publisher).not_to have_received(:publish)
   end
 
   it "fails with an error when the order was cancelled" do
@@ -17,5 +29,6 @@ RSpec.describe OrderCompletion do
     expect(service.call).to be(false)
     expect(service.errors.full_messages).to eq(["Order is cancelled"])
     expect(order.reload).to be_cancelled
+    expect(event_publisher).not_to have_received(:publish)
   end
 end

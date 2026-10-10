@@ -69,6 +69,19 @@ RSpec.describe OrderCreation do
     expect(ExpireOrderJob.jobs).to be_empty
   end
 
+  %w[reserved sold cancelled].each do |status|
+    it "fails with an error when the ticket is #{status} according to the tickets service" do
+      ticket.update!(status:)
+      service = call
+
+      expect(service.call).to be(false)
+      expect(service.errors.full_messages).to eq(["Ticket is not available"])
+      expect(Order.count).to eq(0)
+      expect(event_publisher).not_to have_received(:publish)
+      expect(ExpireOrderJob.jobs).to be_empty
+    end
+  end
+
   it "lets a ticket be ordered again once its order is cancelled" do
     Order.create!(user_id: next_id, ticket:, status: :cancelled, expires_at: 15.minutes.from_now)
 

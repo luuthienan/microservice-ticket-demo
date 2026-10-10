@@ -7,11 +7,12 @@ class OrderCreation
 
   ACTIVE_ORDER_INDEX = "index_orders_on_ticket_id_active"
 
-  # Returns the new order, or false with errors when the ticket is already reserved.
-  # The check below is a fast path; the unique index on active orders is what decides a race.
+  # Returns the new order, or false with errors when the ticket is already reserved or otherwise not available.
+  # The checks below are a fast path; the unique index on active orders is what decides a race.
   def call
     ticket = Ticket.find(ticket_id)
     return already_reserved if ticket.reserved?
+    return not_available unless ticket.available?
 
     order = ApplicationRecord.transaction do
       order = Order.create!(user_id:, ticket:, expires_at: expiration_window.from_now)
@@ -30,6 +31,11 @@ class OrderCreation
 
   def already_reserved
     errors.add(:base, "Ticket is already reserved")
+    false
+  end
+
+  def not_available
+    errors.add(:base, "Ticket is not available")
     false
   end
 
