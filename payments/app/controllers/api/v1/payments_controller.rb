@@ -11,4 +11,12 @@ class Api::V1::PaymentsController < ApplicationController
 
     render json: { id: payment.id }, status: :created
   end
+
+  # Where a buyer follows a payment: pending, then paid, or failed with the reason.
+  def show
+    payment = Payment.find(params[:id])
+    raise ApiError::NotAuthorized unless payment.order.user_id == current_user["id"]
+
+    render json: { id: payment.id, status: payment.status, failure_message: payment.failure_message }
+  end
 end

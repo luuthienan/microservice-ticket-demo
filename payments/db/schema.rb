@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_04_011524) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_11_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -36,10 +36,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_04_011524) do
 
   create_table "payments", force: :cascade do |t|
     t.bigint "order_id", null: false
-    t.string "stripe_id", null: false
+    t.string "stripe_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["order_id"], name: "index_payments_on_order_id", unique: true
+    t.string "status", default: "pending", null: false
+    t.string "token"
+    t.string "failure_message"
+    t.index ["order_id"], name: "index_payments_on_order_id"
+    t.index ["order_id"], name: "index_payments_on_order_id_unfailed", unique: true, where: "((status)::text <> 'failed'::text)"
   end
 
   add_foreign_key "payments", "orders"

@@ -13,7 +13,7 @@ class PaymentCreation
       errors.add(:base, "Cannot pay for a cancelled order")
       return false
     end
-    if order.payment
+    if order.payments.exists?
       errors.add(:base, "Order is already paid")
       return false
     end
@@ -29,7 +29,7 @@ class PaymentCreation
       description: "Order #{order.id}"
     )
     ApplicationRecord.transaction do
-      payment = Payment.create!(order:, stripe_id: charge.id)
+      payment = Payment.create!(order:, stripe_id: charge.id, status: :paid)
       EventPublisher.new.publish("payment:created", { id: payment.id, order_id: order.id, stripe_id: payment.stripe_id })
       payment
     end
