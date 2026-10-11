@@ -43,6 +43,7 @@ services:
     <<: *kafka-image
     environment:
       KAFKA_NODE_ID: 1
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
