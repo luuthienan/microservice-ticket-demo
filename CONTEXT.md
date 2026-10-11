@@ -21,12 +21,16 @@ A counter on a record that a Copy follows. A Copy applies an update only when it
 _Avoid_: Revision, sequence number
 
 **Order**:
-A user's request to buy a ticket. It is Pending until the tickets service confirms the ticket is reserved for it, then awaiting payment until it is paid or cancelled; an order left unpaid past its deadline is cancelled, and one whose reservation is rejected is cancelled. Users see an order as "Pending", "Awaiting payment", "Paid" or "Cancelled", and an expired order is simply "Cancelled".
+A user's request to buy a ticket. It is Pending until the tickets service confirms the ticket is reserved for it, then awaiting payment until it is paid or cancelled; while a payment has claimed it, it is in Payment processing. An order left unpaid past its deadline is cancelled, and one whose reservation is rejected is cancelled. Users see an order as "Pending", "Awaiting payment", "Processing payment", "Paid" or "Cancelled", and an expired order is simply "Cancelled".
 _Avoid_: Purchase, booking
 
 **Pending**:
 An order whose ticket the tickets service has not yet confirmed as reserved for it. It cannot be paid and has no payment deadline. The user may cancel it.
 _Avoid_: Processing, created
+
+**Payment processing**:
+An order that a payment has claimed: the orders service accepted the buyer's payment, so the card may now be charged, and the order can no longer expire or be cancelled while it is. It ends when the payment succeeds (the order is paid) or fails (the order is awaiting payment again, with its original deadline). Not the same as Pending, where the ticket is not yet confirmed.
+_Avoid_: Paying, charging
 
 **Reservation**:
 A ticket being held by an order, so nobody else can order it. The tickets service makes it, or rejects it when the ticket was edited since the order was placed or is no longer Available. It lasts until that order is cancelled or expires. While it lasts, the ticket's status is Reserved.
