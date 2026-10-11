@@ -14,6 +14,11 @@ class ApplicationController < ActionController::API
     render_errors errors, 400
   end
 
+  # Another change to the order (the payment claim, say) won; the user can look again and retry.
+  rescue_from ActiveRecord::StaleObjectError do
+    render_errors [{ message: "Order changed, try again" }], 409
+  end
+
   private
 
   # Renders the errors of a validator or service (anything ActiveModel::Errors-backed) as a 400.

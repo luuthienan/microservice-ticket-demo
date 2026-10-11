@@ -25,6 +25,15 @@ RSpec.describe ExpireOrderJob do
     expect(event_publisher).not_to have_received(:publish)
   end
 
+  it "leaves an order a payment has claimed alone, so it cannot be cancelled while a card is being charged" do
+    order = create_order(status: :payment_processing)
+
+    described_class.new.perform(order.id)
+
+    expect(order.reload).to be_payment_processing
+    expect(event_publisher).not_to have_received(:publish)
+  end
+
   it "leaves a complete order alone" do
     order = create_order(status: :complete)
 

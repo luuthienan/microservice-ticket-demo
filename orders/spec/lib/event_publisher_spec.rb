@@ -11,10 +11,12 @@ RSpec.describe EventPublisher do
     )
   end
 
-  it "keys a payment by its order" do
-    described_class.new.publish("payment:created", { id: 3, order_id: 5, stripe_id: "ch_1" })
+  %w[payment:requested payment:paid payment:failed].each do |subject|
+    it "keys #{subject} by its order, so all events for an order stay in order" do
+      described_class.new.publish(subject, { id: 3, order_id: 5 })
 
-    expect(OutboxEvent.last.entity_id).to eq(5)
+      expect(OutboxEvent.last.entity_id).to eq(5)
+    end
   end
 
   it "raises outside a transaction, so the event can't outlive a rolled-back change" do
