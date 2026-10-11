@@ -42,6 +42,19 @@ RSpec.describe EventConsumer do
       expect(kafka).to have_received(:commit)
     end
 
+    it "logs the event it received and that it handled it" do
+      allow(Rails.logger).to receive(:info)
+
+      deliver(message)
+
+      expect(Rails.logger).to have_received(:info).with(
+        "[EventConsumer] received subject=ticket:created topic=tickets.events partition=2 offset=5 payload={\"id\":1}"
+      )
+      expect(Rails.logger).to have_received(:info).with(
+        /\A\[EventConsumer\] handled subject=ticket:created topic=tickets.events partition=2 offset=5 duration_ms=[\d.]+\z/
+      )
+    end
+
     it "does nothing when there is no message" do
       deliver(nil)
 
@@ -63,7 +76,15 @@ RSpec.describe EventConsumer do
         end
       end
 
-      before { allow(consumer).to receive(:warn) }
+      before { allow(Rails.logger).to receive(:warn) }
+
+      it "logs the failure as a warning" do
+        deliver(message)
+
+        expect(Rails.logger).to have_received(:warn).with(
+          "[EventConsumer] failed subject=ticket:created topic=tickets.events partition=2 offset=5 attempt=1 retry_in=1s error=RuntimeError: boom"
+        )
+      end
 
       it "rewinds to the message and pauses only its partition instead of committing" do
         msg = message
@@ -111,7 +132,7 @@ RSpec.describe EventConsumer do
     end
 
     it "treats a payload that is not JSON like any other failing handler" do
-      allow(consumer).to receive(:warn)
+      allow(Rails.logger).to receive(:warn)
 
       deliver(message(payload: "not json"))
 
