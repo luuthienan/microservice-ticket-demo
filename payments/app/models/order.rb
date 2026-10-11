@@ -2,5 +2,5 @@
 class Order < ApplicationRecord
   enum :status, { created: "created", awaiting_payment: "awaiting_payment", cancelled: "cancelled", complete: "complete" }
 
-  has_one :payment
+  has_many :payments
 end

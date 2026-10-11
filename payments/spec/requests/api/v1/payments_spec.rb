@@ -81,4 +81,44 @@ RSpec.describe "Payments", type: :request do
     expect(event_publisher).to have_received(:publish)
       .with("payment:created", { id: payment.id, order_id: order.id, stripe_id: "ch_123" })
   end
+
+  describe "GET /api/v1/payments/:id" do
+    let(:payment) { Payment.create!(order:, status: :failed, failure_message: "Your card was declined.") }
+
+    def show(id: payment.id, user: user_id) = get "/api/v1/payments/#{id}", headers: sign_in_as(user), as: :json
+
+    it "requires sign in" do
+      get "/api/v1/payments/#{payment.id}", as: :json
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it "returns the status and the reason it failed" do
+      show
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to eq("id" => payment.id, "status" => "failed", "failure_message" => "Your card was declined.")
+    end
+
+    it "returns a pending payment without a failure message" do
+      pending_payment = Payment.create!(order:)
+
+      show(id: pending_payment.id)
+
+      expect(response.parsed_body).to eq("id" => pending_payment.id, "status" => "pending", "failure_message" => nil)
+    end
+
+    it "returns 404 for an unknown payment" do
+      show(id: next_id)
+
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it "rejects another user's payment" do
+      show(user: next_id)
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+  end
 end
+
