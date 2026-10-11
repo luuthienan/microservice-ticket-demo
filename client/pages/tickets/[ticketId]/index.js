@@ -1,6 +1,6 @@
 import Route from "next/router";
-import useRequest from "../../hooks/use-request";
-import { STATUS_LABELS } from "../../components/ticket-status";
+import useRequest from "../../../hooks/use-request";
+import { STATUS_LABELS } from "../../../components/ticket-status";
 
 const TicketShow = ({ ticket }) => {
   const { doRequest, errors } = useRequest({

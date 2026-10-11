@@ -26,9 +26,18 @@ const TicketRow = ({ ticket }) => {
           View
         </Link>
         {ticket.status === "available" && (
-          <button className="btn btn-link text-danger p-0 ms-3" onClick={cancel}>
-            Cancel
-          </button>
+          <>
+            <Link
+              href={"/tickets/[ticketId]/edit"}
+              as={`/tickets/${ticket.id}/edit`}
+              className="ms-3"
+            >
+              Edit
+            </Link>
+            <button className="btn btn-link text-danger p-0 ms-3" onClick={cancel}>
+              Cancel
+            </button>
+          </>
         )}
         {errors}
       </td>
