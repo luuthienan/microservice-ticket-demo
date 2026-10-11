@@ -24,6 +24,7 @@ class EventConsumer
   # Runs forever.
   def listen
     consumer.subscribe(*topics)
+    Rails.logger.info("[EventConsumer] subscribed group=#{group} topics=#{topics.join(',')}")
     loop { poll }
   end
 
@@ -45,8 +46,17 @@ class EventConsumer
   end
 
   def process(message)
-    listener = @handlers[message.headers&.fetch("subject", nil)]
-    listener&.new&.handle(JSON.parse(message.payload))
+    subject = message.headers&.fetch("subject", nil)
+    listener = @handlers[subject]
+    if listener
+      Rails.logger.info("[EventConsumer] received #{describe(message, subject)} payload=#{message.payload}")
+      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      listener.new.handle(JSON.parse(message.payload))
+      duration_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round(1)
+      Rails.logger.info("[EventConsumer] handled #{describe(message, subject)} duration_ms=#{duration_ms}")
+    else
+      Rails.logger.info("[EventConsumer] skipped #{describe(message, subject)} reason=no_listener")
+    end
     succeeded(message)
   rescue => e
     failed(message, e)
@@ -71,8 +81,8 @@ class EventConsumer
   # Rewinds to the failed message and pauses its partition for 1, 2, 4, 8 seconds.
   def retry_later(message, error, attempts)
     delay = 2**(attempts - 1)
-    warn "#{message.topic}[#{message.partition}]@#{message.offset} failed (attempt #{attempts}), retrying in #{delay}s: " \
-         "#{error.class}: #{error.message}"
+    Rails.logger.warn("[EventConsumer] failed #{describe(message)} attempt=#{attempts} retry_in=#{delay}s " \
+                      "error=#{error.class}: #{error.message}")
     consumer.seek(message)
     consumer.pause(partition_list(message.topic, message.partition))
     @resume_at[[message.topic, message.partition]] = Time.current + delay
@@ -88,7 +98,8 @@ class EventConsumer
   end
 
   def dead_letter(message, error, attempts)
-    warn "#{message.topic}[#{message.partition}]@#{message.offset} dead-lettered: #{error.class}: #{error.message}"
+    Rails.logger.error("[EventConsumer] dead-lettered #{describe(message)} attempts=#{attempts} " \
+                       "error=#{error.class}: #{error.message}")
     producer.produce(
       topic: EventBus.dead_letter_topic_for(message.topic), key: message.key, payload: message.payload,
       headers: (message.headers || {}).merge(
@@ -96,6 +107,10 @@ class EventConsumer
         "original_partition" => message.partition.to_s, "original_offset" => message.offset.to_s
       )
     ).wait
+  end
+
+  def describe(message, subject = message.headers&.fetch("subject", nil))
+    "subject=#{subject} topic=#{message.topic} partition=#{message.partition} offset=#{message.offset}"
   end
 
   def position(message) = [message.topic, message.partition, message.offset]

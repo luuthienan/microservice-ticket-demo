@@ -16,6 +16,7 @@ class OutboxRelay
   # or the order would be lost.
   def run
     sleep POLL_INTERVAL until lock_acquired?
+    Rails.logger.info("[OutboxRelay] lock acquired, relaying outbox events")
     loop do
       sleep POLL_INTERVAL if relay_pending.zero?
       purge_published
@@ -30,7 +31,8 @@ class OutboxRelay
   def purge_published
     return if Time.current - @last_purge < PURGE_INTERVAL
 
-    OutboxEvent.where(published_at: ...RETENTION.ago).delete_all
+    purged = OutboxEvent.where(published_at: ...RETENTION.ago).delete_all
+    Rails.logger.info("[OutboxRelay] purged count=#{purged}") if purged.positive?
     @last_purge = Time.current
   end
 
@@ -45,11 +47,14 @@ class OutboxRelay
   end
 
   def send_event(event)
-    producer.produce(
-      topic: EventBus.topic_for(event.subject), key: event.entity_id.to_s, payload: event.payload.to_json,
+    topic = EventBus.topic_for(event.subject)
+    report = producer.produce(
+      topic:, key: event.entity_id.to_s, payload: event.payload.to_json,
       headers: { "subject" => event.subject, "event_id" => event.id.to_s,
                  "occurred_at" => event.occurred_at.iso8601(3), "producer" => EventBus.producer_name }
     ).wait
     event.update_columns(published_at: Time.current)
+    Rails.logger.info("[OutboxRelay] published subject=#{event.subject} event_id=#{event.id} entity_id=#{event.entity_id} " \
+                      "topic=#{topic} partition=#{report&.partition} offset=#{report&.offset} payload=#{event.payload.to_json}")
   end
 end

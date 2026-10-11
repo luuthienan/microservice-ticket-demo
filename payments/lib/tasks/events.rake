@@ -7,12 +7,14 @@ namespace :events do
   desc "Listen for events from other services"
   task listen: :environment do
     $stdout.sync = true
+    Rails.logger = ActiveSupport::Logger.new($stdout)
     consumer.call.listen
   end
 
   desc "Send events from the outbox to Kafka"
   task relay: :environment do
     $stdout.sync = true
+    Rails.logger = ActiveSupport::Logger.new($stdout)
     OutboxRelay.new.run
   end
 

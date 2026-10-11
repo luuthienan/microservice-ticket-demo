@@ -23,6 +23,18 @@ RSpec.describe OutboxRelay do
       expect(event.reload.published_at).to be_present
     end
 
+    it "logs each event it publishes" do
+      allow(Rails.logger).to receive(:info)
+      event = outbox("ticket:created", 7, { id: 7 })
+
+      relay.relay_pending
+
+      expect(Rails.logger).to have_received(:info).with(
+        "[OutboxRelay] published subject=ticket:created event_id=#{event.id} entity_id=7 topic=tickets.events " \
+        "partition= offset= payload={\"id\":7}"
+      )
+    end
+
     it "sends events in id order and skips ones already published" do
       done = outbox("ticket:created", 1).tap { |event| event.update!(published_at: Time.current) }
       first = outbox("ticket:created", 2)
