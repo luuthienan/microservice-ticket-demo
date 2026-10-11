@@ -5,6 +5,7 @@ import axios from "axios";
 import { loadStripe } from "@stripe/stripe-js";
 import { CardElement, Elements, useElements, useStripe } from "@stripe/react-stripe-js";
 import useRequest from "../../hooks/use-request";
+import CancelOrderButton, { isOrderCancellable } from "../../components/cancel-order-button";
 
 const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISH_KEY;
 const stripePromise = publishableKey ? loadStripe(publishableKey) : null;
@@ -196,6 +197,11 @@ const OrderShow = ({ order }) => {
       <p>Price: ${order.ticket.price}</p>
       {failure && !paid && <div className="alert alert-danger">Payment failed: {failure}</div>}
       {renderPayment()}
+      {!paid && !paymentId && isOrderCancellable(order) && (
+        <div className="mt-3">
+          <CancelOrderButton orderId={order.id} />
+        </div>
+      )}
     </div>
   );
 };

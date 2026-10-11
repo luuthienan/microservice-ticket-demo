@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Router from "next/router";
+import CancelOrderButton, { isOrderCancellable } from "../../components/cancel-order-button";
 
 // "Cancelled" also covers orders that expired unpaid: expiry cancels the order.
 // A "created" order is Pending: its ticket is not yet confirmed, so it can't be paid.
@@ -33,6 +34,7 @@ const OrderIndex = ({ orders }) => {
           <Link href={"/orders/[orderId]"} as={`/orders/${order.id}`}>
             {action}
           </Link>
+          {isOrderCancellable(order) && <CancelOrderButton orderId={order.id} className="ms-3" />}
         </td>
       </tr>
     );
