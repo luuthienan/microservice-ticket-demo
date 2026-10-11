@@ -1,37 +1,45 @@
+# Records that the buyer wants to pay for an order and asks orders to claim it (payment:requested). The card is
+# charged only once orders has claimed the order (order:payment_processing), see PaymentCharge, so a payment never
+# races the order's expiry.
 class PaymentCreation
   include ActiveModel::Model
 
   attr_accessor :order_id, :token, :user_id
 
-  # Returns the payment, or false with errors when the order can no longer be paid or is still Pending
-  # (the tickets service has not yet confirmed its ticket).
+  # Returns the pending payment, or false with errors when the order can no longer be paid, is still Pending
+  # (the tickets service has not yet confirmed its ticket) or already has a payment that did not fail.
   def call
     order = Order.find(order_id)
     raise ApiError::NotAuthorized unless order.user_id == user_id
 
-    if order.cancelled?
-      errors.add(:base, "Cannot pay for a cancelled order")
-      return false
-    end
-    if order.payments.exists?
-      errors.add(:base, "Order is already paid")
-      return false
-    end
-    unless order.awaiting_payment?
-      errors.add(:base, "Order is not awaiting payment")
-      return false
-    end
-
-    charge = Stripe::Charge.create(
-      amount: (order.price * 100).to_i,
-      currency: "usd",
-      source: token,
-      description: "Order #{order.id}"
-    )
+    # Locking the copy makes this check and the order's cancellation (OrderCopyCancellation) take turns, so a
+    # payment is never left pending on an order cancelled just before it.
     ApplicationRecord.transaction do
-      payment = Payment.create!(order:, stripe_id: charge.id, status: :paid)
-      EventPublisher.new.publish("payment:created", { id: payment.id, order_id: order.id, stripe_id: payment.stripe_id })
-      payment
+      order.lock!
+      refusal = refusal_for(order)
+      if refusal
+        errors.add(:base, refusal)
+        false
+      else
+        request_payment(order)
+      end
     end
+  end
+
+  private
+
+  def refusal_for(order)
+    return "Cannot pay for a cancelled order" if order.cancelled?
+    return "Order is already paid" if order.payments.paid.exists?
+    return "A payment is already in progress" if order.payments.pending.exists?
+
+    # A copy still claimed after its payment failed is about to hear that the order can be paid again.
+    "Order is not awaiting payment" unless order.awaiting_payment? || order.payment_processing?
+  end
+
+  def request_payment(order)
+    payment = Payment.create!(order:, token:)
+    EventPublisher.new.publish("payment:requested", { id: payment.id, order_id: order.id })
+    payment
   end
 end

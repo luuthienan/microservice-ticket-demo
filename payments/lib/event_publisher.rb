@@ -3,7 +3,9 @@
 class EventPublisher
   # The field of the payload that names the entity an Event is about. It is the Kafka message key,
   # so all Events for one entity stay in order.
-  ENTITY_FIELD = Hash.new(:id).merge("payment:created" => :order_id).freeze
+  ENTITY_FIELD = Hash.new(:id).merge(
+    "payment:requested" => :order_id, "payment:paid" => :order_id, "payment:failed" => :order_id
+  ).freeze
 
   def publish(subject, data)
     raise "Events must be published inside the transaction that changes the data" unless OutboxEvent.connection.transaction_open?
