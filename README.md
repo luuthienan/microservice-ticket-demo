@@ -8,7 +8,7 @@ It is a rewrite of the Node.js `ticketing` demo; the Next.js client is unchanged
 | `auth`       | Sign up, sign in, sign out, current user (JWT in a cookie)     | `auth_*`          |
 | `tickets`    | Create, edit and list tickets; locks a ticket while it is ordered | `tickets_*`    |
 | `orders`     | Create and cancel orders; orders wait for the ticket to be confirmed, then expire after 1 minute by default (Sidekiq) | `orders_*`    |
-| `payments`   | Charge an order with Stripe                                    | `payments_*`      |
+| `payments`   | Charge an order with Stripe, once `orders` has claimed it for the payment | `payments_*`      |
 | `client`     | Next.js frontend                                               |                   |
 
 `nginx` routes `/api/v1/users`, `/api/v1/tickets`, `/api/v1/orders` and `/api/v1/payments` to the services and everything else to the client.
@@ -25,10 +25,13 @@ ticket:created, ticket:updated  tickets  -> orders
 ticket:reserved                 tickets  -> orders
 ticket:reservation-rejected     tickets  -> orders
 order:created                   orders   -> tickets, payments
-order:awaiting_payment          orders   -> payments
+order:awaiting_payment          orders   -> payments    (also when a failed payment makes the order payable again)
+order:payment_processing        orders   -> payments
 order:cancelled                 orders   -> tickets, payments
 order:completed                 orders   -> tickets
-payment:created                 payments -> orders
+payment:requested               payments -> orders
+payment:paid                    payments -> orders
+payment:failed                  payments -> orders
 ```
 
 **Publishing.** A service writes each event to its `outbox_events` table in the same transaction as the change it
@@ -49,8 +52,15 @@ reserves the ticket only if it is still available at that version (the check is 
 the order to awaiting payment. Otherwise `tickets` publishes `ticket:reservation-rejected` and `orders` cancels
 the order. See `docs/adr/0005-tickets-confirms-reservations.md`.
 
+**Payment.** Payments never charges an order on its own say-so. `POST /api/v1/payments` saves a pending payment and
+publishes `payment:requested`; `orders` claims the order (awaiting payment to payment processing, which expiry and
+cancel leave alone) and publishes `order:payment_processing`; only then does `payments` charge the card and publish
+`payment:paid`, which completes the order, or `payment:failed`, which puts the order back to awaiting payment. The
+client follows the payment at `GET /api/v1/payments/:id`. Events name their payment so a replay cannot undo a
+newer attempt. See `docs/adr/0006-orders-claims-orders-for-payment.md`.
+
 Order expiry is not an event: when an order becomes awaiting payment, `orders` schedules a Sidekiq job (Redis holds
-the jobs) and the job cancels the order if it is still unpaid. The window is `EXPIRATION_WINDOW_SECONDS`
+the jobs) and the job cancels the order if it is still awaiting payment (an order a payment has claimed is left alone). The window is `EXPIRATION_WINDOW_SECONDS`
 (default 60). A Pending order has no deadline.
 
 ### Replay
