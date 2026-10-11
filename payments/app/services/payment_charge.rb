@@ -13,7 +13,7 @@ class PaymentCharge
 
     charge = Stripe::Charge.create(
       { amount: (payment.order.price * 100).to_i, currency: "usd", source: payment.token, description: "Order #{payment.order_id}" },
-      { idempotency_key: "payment-#{payment.order_id}-#{payment.id}" }
+      { idempotency_key: "payment-#{payment.order_id}-#{payment.id}-#{payment.created_at.to_i}" }
     )
     settle(payment, status: :paid, stripe_id: charge.id)
   rescue Stripe::CardError, Stripe::InvalidRequestError => e
