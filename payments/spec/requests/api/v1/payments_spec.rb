@@ -51,7 +51,7 @@ RSpec.describe "Payments", type: :request do
     expect(response.parsed_body["errors"].first["message"]).to eq("Cannot pay for a cancelled order")
   end
 
-  it "rejects an order that is already paid" do
+  it "rejects a second payment while one is in progress" do
     pay
     pay
 
@@ -59,27 +59,15 @@ RSpec.describe "Payments", type: :request do
     expect(Payment.count).to eq(1)
   end
 
-  it "returns the card error message and saves nothing when the card is declined" do
-    allow(Stripe::Charge).to receive(:create)
-      .and_raise(Stripe::CardError.new("Your card was declined.", "number", code: "card_declined"))
-
+  it "saves a pending payment, asks orders to claim the order and answers 202 without charging the card" do
     pay
 
-    expect(response).to have_http_status(:bad_request)
-    expect(response.parsed_body["errors"]).to eq([{ "message" => "Your card was declined." }])
-    expect(Payment.count).to eq(0)
-  end
-
-  it "charges the card, saves the payment and publishes payment:created" do
-    pay
-
-    expect(response).to have_http_status(:created)
-    expect(Stripe::Charge).to have_received(:create).with(hash_including(amount: 2050, currency: "usd", source: "tok_visa"))
+    expect(response).to have_http_status(:accepted)
     payment = Payment.last
-    expect(payment).to have_attributes(order:, stripe_id: "ch_123")
+    expect(payment).to have_attributes(order:, status: "pending", token: "tok_visa")
     expect(response.parsed_body).to eq("id" => payment.id)
-    expect(event_publisher).to have_received(:publish)
-      .with("payment:created", { id: payment.id, order_id: order.id, stripe_id: "ch_123" })
+    expect(event_publisher).to have_received(:publish).with("payment:requested", { id: payment.id, order_id: order.id })
+    expect(Stripe::Charge).not_to have_received(:create)
   end
 
   describe "GET /api/v1/payments/:id" do

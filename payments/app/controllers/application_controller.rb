@@ -14,10 +14,6 @@ class ApplicationController < ActionController::API
     render_errors errors, 400
   end
 
-  rescue_from Stripe::CardError do |error|
-    render_errors [{ message: error.message }], 400
-  end
-
   private
 
   # Renders the errors of a validator or service (anything ActiveModel::Errors-backed) as a 400.

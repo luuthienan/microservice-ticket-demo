@@ -1,6 +1,7 @@
 class Api::V1::PaymentsController < ApplicationController
   before_action :require_auth
 
+  # Accepted, not created: the card is charged later, once orders has claimed the order. Follow the payment with show.
   def create
     validator = CreatePaymentValidator.new(order_id: params[:order_id], token: params[:token])
     return render_validation_errors(validator) unless validator.valid?
@@ -9,7 +10,7 @@ class Api::V1::PaymentsController < ApplicationController
     payment = service.call
     return render_validation_errors(service) unless payment
 
-    render json: { id: payment.id }, status: :created
+    render json: { id: payment.id }, status: :accepted
   end
 
   # Where a buyer follows a payment: pending, then paid, or failed with the reason.
