@@ -132,23 +132,78 @@ RSpec.describe "listeners" do
     end
   end
 
-  describe PaymentCreatedListener do
-    it "marks the order complete" do
-      TicketCreatedListener.new.handle(ticket_event(version: 0))
-      order = create_order(status: :awaiting_payment)
+  describe "payment listeners" do
+    let(:payment_id) { next_id }
 
-      described_class.new.handle("order_id" => order.id)
+    before { TicketCreatedListener.new.handle(ticket_event(version: 0)) }
 
-      expect(order.reload).to be_complete
+    describe PaymentRequestedListener do
+      it "claims the order awaiting payment for the payment" do
+        order = create_order(status: :awaiting_payment)
+
+        described_class.new.handle("id" => payment_id, "order_id" => order.id)
+
+        expect(order.reload).to have_attributes(status: "payment_processing", payment_id:)
+      end
+
+      it "leaves a cancelled order cancelled" do
+        order = create_order(status: :cancelled)
+
+        described_class.new.handle("id" => payment_id, "order_id" => order.id)
+
+        expect(order.reload).to be_cancelled
+      end
+
+      it "raises for an unknown order, so the event is retried until the order arrives" do
+        expect { described_class.new.handle("id" => payment_id, "order_id" => next_id) }.to raise_error(ActiveRecord::RecordNotFound)
+      end
     end
 
-    it "does not revive a cancelled order" do
-      TicketCreatedListener.new.handle(ticket_event(version: 0))
-      order = create_order(status: :cancelled)
+    describe PaymentPaidListener do
+      it "marks the order claimed for the payment complete" do
+        order = create_order(status: :payment_processing)
+        order.update!(payment_id:)
 
-      described_class.new.handle("order_id" => order.id)
+        described_class.new.handle("id" => payment_id, "order_id" => order.id)
 
-      expect(order.reload).to be_cancelled
+        expect(order.reload).to be_complete
+      end
+
+      it "does not revive a cancelled order" do
+        order = create_order(status: :cancelled)
+
+        described_class.new.handle("id" => payment_id, "order_id" => order.id)
+
+        expect(order.reload).to be_cancelled
+      end
+
+      it "does not complete an order no payment claimed" do
+        order = create_order(status: :awaiting_payment)
+
+        described_class.new.handle("id" => payment_id, "order_id" => order.id)
+
+        expect(order.reload).to be_awaiting_payment
+      end
+    end
+
+    describe PaymentFailedListener do
+      it "puts the order claimed for the payment back to awaiting payment" do
+        order = create_order(status: :payment_processing)
+        order.update!(payment_id:)
+
+        described_class.new.handle("id" => payment_id, "order_id" => order.id)
+
+        expect(order.reload).to be_awaiting_payment
+      end
+
+      it "leaves an order claimed for another payment alone" do
+        order = create_order(status: :payment_processing)
+        order.update!(payment_id: payment_id + 1)
+
+        described_class.new.handle("id" => payment_id, "order_id" => order.id)
+
+        expect(order.reload).to be_payment_processing
+      end
     end
   end
 end

@@ -119,7 +119,7 @@ RSpec.describe "Orders", type: :request do
     end
 
     it "rejects cancelling an order that is already cancelled or complete" do
-      %i[cancelled complete].each do |status|
+      %i[payment_processing cancelled complete].each do |status|
         order = create_order(ticket: Ticket.create!(id: next_id, title: status.to_s, price: 1))
         order.update!(status:)
 
@@ -130,6 +130,16 @@ RSpec.describe "Orders", type: :request do
         expect(order.reload.status).to eq(status.to_s)
       end
       expect(event_publisher).not_to have_received(:publish)
+    end
+
+    it "answers 409 when the order changed under it, as when a payment claims it at the same moment" do
+      order = create_order
+      allow_any_instance_of(OrderCancellation).to receive(:call).and_raise(ActiveRecord::StaleObjectError)
+
+      delete "/api/v1/orders/#{order.id}", headers: sign_in_as(user_id)
+
+      expect(response).to have_http_status(:conflict)
+      expect(response.parsed_body["errors"].first["message"]).to eq("Order changed, try again")
     end
 
     it "rejects another user's order" do
